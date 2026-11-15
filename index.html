@@ -50,11 +50,11 @@
     newBest: "שיא חדש!",
     again: "געי במסך כדי לנסות שוב",
     combo: "קומבו +",
-    dog: "הב הב!"
+    dog: "ליאו: הב הב!"
   };
 
   // ---------- Stages ----------
-  var STAGE_FLOORS = 15;
+  var STAGE_FLOORS = 25;
   var STAGES = [
     { name: "תה קר עם פנינים", top: "#f6d7a7", bot: "#e9a35e", plat: "tea", item: "pearl", label: "פנינים" },
     { name: "שוקו חם", top: "#5a3524", bot: "#2f1a11", plat: "choco", item: "marsh", label: "מרשמלו" },
@@ -71,7 +71,7 @@
   load("d1", "img/d1.webp"); load("d2", "img/d2.webp");
   function ready(n) { var im = imgs[n]; return im && im.complete && im.naturalWidth > 0; }
   // Expressions: happy while rising, surprised while falling, sleeping on game over
-  var HAPPY = ["a4", "a6", "a9", "a8", "a10", "a5", "a11", "a1".replace("a1", "a4")];
+  var HAPPY = ["a4", "a6", "a9", "a8", "a10", "a5", "a11"];
   var FALL = ["a2", "a3", "a7"];
   var FACE_SLEEP = "a1", FACE_START = "a6";
 
@@ -80,7 +80,7 @@
   var state = STATE_START;
   var GRAVITY = 2400, MOVE_ACCEL = 2600, MAX_RUN = 300, FRICTION = 1800, BASE_JUMP = 700, SPEED_JUMP_BONUS = 1.35, WALL_KEEP = 0.85;
   var player, platforms, camY, highestY, startY, score, best, comboText, comboUntil, particles, itemsGot, popups, lastLandY, runStartedAt = 0;
-  var bannerText = "", bannerUntil = 0, lastStage = -1;
+  var bannerText = "", bannerUntil = 0, lastStage = -1, faceChangedAt = 0;
   best = parseInt(localStorage.getItem("orel_best") || "0", 10) || 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }
@@ -107,7 +107,7 @@
     platforms.push(ground);
     var y = 0, first = true;
     while (y > -H * 1.2 - 200) { y -= rand(75, 105); platforms.push(makePlatform(y, first)); first = false; }
-    player = { x: W / 2, y: -20, vx: 0, vy: 0, r: 16, ground: ground, faceDir: 1, squash: 0, face: "a6" };
+    player = { x: W / 2, y: -20, vx: 0, vy: 0, r: 18, ground: ground, faceDir: 1, squash: 0, face: "a6" };
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
   }
@@ -194,7 +194,7 @@
     }
     if (player.y - camY > H + 40) { state = STATE_OVER; overAt = nowS(); if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } }
     // face: happy going up, surprised when falling
-    if (player.vy > 150) { if (FALL.indexOf(player.face) < 0) player.face = pick(FALL); }
+    if (player.vy > 650) { if (FALL.indexOf(player.face) < 0) { player.face = pick(FALL); faceChangedAt = nowS(); } }
   }
 
   function land(p) {
@@ -203,7 +203,7 @@
     var boost = Math.min(Math.abs(player.vx), MAX_RUN) * SPEED_JUMP_BONUS;
     player.vy = -(BASE_JUMP + boost);
     if (p.dog) { player.vy = -(BASE_JUMP * 1.75 + boost * 0.3); popups.push({ x: p.x + p.w / 2, y: p.y - 60, t: 1.1, txt: T.dog }); }
-    player.squash = 1; player.face = pick(HAPPY);
+    player.squash = 1; if (nowS() - faceChangedAt > 3 || FALL.indexOf(player.face) >= 0) { var nf; do { nf = pick(HAPPY); } while (nf === player.face && HAPPY.length > 1); player.face = nf; faceChangedAt = nowS(); }
     for (var i = 0; i < 6; i++) particles.push({ x: player.x + rand(-8, 8), y: p.y, vx: rand(-120, 120), vy: rand(-160, -20), life: rand(0.2, 0.45), max: 0.45, c: "255,255,255" });
     if (gained >= 2) { comboText = T.combo + gained + "!"; comboUntil = nowS() + 1.2; }
   }
@@ -329,6 +329,38 @@
     ctx.restore();
   }
 
+  // Icy Tower style "homeboy": knit beanie, baggy hoodie, big sneakers; head = Orel's photo.
+  function beanie(x, y, w) { // drawn on top of the head, centered at x, top of head at y
+    ctx.fillStyle = "#e0453a"; ctx.beginPath(); ctx.ellipse(x, y + 2, w * 0.5, w * 0.42, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#fff"; for (var i = -1; i <= 1; i++) { ctx.fillRect(x + i * w * 0.2 - 1.5, y - w * 0.36, 3, w * 0.34); }
+    ctx.fillStyle = "#b8281f"; rr(x - w * 0.52, y + 1, w * 1.04, w * 0.2, 4); ctx.fill();
+    circle(x, y - w * 0.43, w * 0.12, "#fff");
+  }
+  function drawHarold(name, mode, vx, tVal) {
+    // origin = player center, feet at +16. mode: 0 idle/run, 1 rising, 2 falling, 3 asleep (start/over uses big face instead)
+    var run = Math.min(1, Math.abs(vx) / MAX_RUN), ph = tVal * 14;
+    var legSwing = mode === 0 ? Math.sin(ph) * 5 * run : 0;
+    ctx.save(); ctx.translate(0, 18); ctx.scale(1.3, 1.3); ctx.translate(0, -18); ctx.rotate(Math.max(-0.25, Math.min(0.25, vx / 1500)));
+    var by = 2; // torso top
+    var arms = mode === 1 ? -1 : (mode === 2 ? 0.2 : 0.6); // arms up when rising
+    // legs (baggy jeans) + sneakers
+    var lx = mode === 1 ? 3 : 4, ly = 8;
+    ctx.fillStyle = "#3d5fa8";
+    if (mode === 1) { rr(-8, ly, 6, 5, 2); ctx.fill(); rr(2, ly, 6, 5, 2); ctx.fill(); ctx.fillStyle = "#fff"; rr(-11, ly + 4, 9, 4, 2); ctx.fill(); rr(2, ly + 4, 9, 4, 2); ctx.fill(); }
+    else { rr(-8 + legSwing, ly, 6, 8, 2); ctx.fill(); rr(2 - legSwing, ly, 6, 8, 2); ctx.fill(); ctx.fillStyle = "#fff"; rr(-11 + legSwing, ly + 6, 10, 4, 2); ctx.fill(); rr(1 - legSwing, ly + 6, 10, 4, 2); ctx.fill(); ctx.fillStyle = "#d7262b"; ctx.fillRect(-10 + legSwing, ly + 7.5, 8, 1.5); ctx.fillRect(2 - legSwing, ly + 7.5, 8, 1.5); }
+    // arms
+    ctx.strokeStyle = "#f2b43a"; ctx.lineCap = "round"; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-9, by + 3); ctx.lineTo(-15, by + 3 + arms * -8 + (mode === 1 ? -6 : 6)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9, by + 3); ctx.lineTo(15, by + 3 + arms * -8 + (mode === 1 ? -6 : 6)); ctx.stroke();
+    // baggy hoodie
+    ctx.fillStyle = "#f2b43a"; rr(-10, by, 20, 11, 4); ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.12)"; ctx.fillRect(-10, by + 8, 20, 3);
+    // head with Orel's face
+    drawFace(0, -13, 36, name, 0);
+    beanie(0, -29, 26);
+    ctx.restore();
+  }
+
   function draw() {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     var hf = state === STATE_START ? 0 : floorsAt(highestY);
@@ -349,8 +381,8 @@
     ctx.save(); ctx.translate(player.x, player.y);
     ctx.scale(1 + sq, 1 - sq);
     var fname = state === STATE_OVER ? FACE_SLEEP : (state === STATE_START ? FACE_START : player.face);
-    ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.beginPath(); ctx.ellipse(0, player.r + 1, player.r * 0.9, 4, 0, 0, 6.2832); ctx.fill();
-    drawFace(0, -4, 56, fname, player.vx / 1600);
+    ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.beginPath(); ctx.ellipse(0, player.r + 10, player.r * 0.9, 4, 0, 0, 6.2832); ctx.fill();
+    drawHarold(fname, player.vy < -50 ? 1 : (player.vy > 500 ? 2 : 0), player.vx, nowS());
     ctx.restore();
     for (var m = 0; m < popups.length; m++) {
       ctx.globalAlpha = Math.min(1, popups[m].t * 2); ctx.fillStyle = "#fff"; ctx.strokeStyle = "rgba(0,0,0,0.5)"; ctx.lineWidth = 3;
@@ -386,7 +418,7 @@
       if (best > 0) { ctx.font = "15px Arial"; outlined(T.best + best, W / 2, H * 0.75, "#ffe9cf"); }
     } else {
       ctx.fillStyle = "rgba(30,15,8,0.6)"; ctx.fillRect(0, 0, W, H);
-      if (ready(FACE_SLEEP)) ctx.drawImage(imgs[FACE_SLEEP], W / 2 - 80, H * 0.12, 160, 160);
+      if (ready(FACE_SLEEP)) { ctx.drawImage(imgs[FACE_SLEEP], W / 2 - 80, H * 0.12 + 18, 160, 160); ctx.save(); ctx.translate(W / 2, H * 0.12 + 36); ctx.scale(3.4, 3.4); beanie(0, 0, 26); ctx.restore(); }
       ctx.font = "bold 22px Arial"; outlined("z z z", W / 2 + 70, H * 0.14, "#cfe3ff");
       ctx.font = "bold 30px Arial"; outlined(T.over, W / 2, H * 0.43, "#fff");
       ctx.font = "20px Arial"; outlined(T.floors + score, W / 2, H * 0.50, "#ffe9cf");
