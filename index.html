@@ -198,7 +198,7 @@
   function testBeep() { try { if (ac && ac.state === "running" && !muted) sfx.collect(); } catch (e) {} }
   window.addEventListener("load", makeSndBtn);
   // ---------- Slang voice clips (decoded after the first unlock, played through the same AudioContext) ----------
-  var stBufs = [], STAGE_VOICE_N = 6, overBufs = [], lastOver = -1, OVER_N = 13;
+  var stBufs = [], STAGE_VOICE_N = 6, overBufs = [], lastOver = -1, OVER_N = 15;
   var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16;
   function loadVoices() {
     if (voiceLoading || !ac) return; voiceLoading = true;
