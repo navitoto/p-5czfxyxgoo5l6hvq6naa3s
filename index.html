@@ -95,7 +95,21 @@
     { key: "hard", label: "קשה", wMul: 0.8, gapMul: 1.12, cam: 10.5, combo: 0.85 }
   ];
   var diffIdx = 1; try { var dk = localStorage.getItem("orel_diff"); for (var di0 = 0; di0 < DIFFS.length; di0++) if (DIFFS[di0].key === dk) diffIdx = di0; } catch (e) {}
-  var showSettings = false;
+  var showSettings = false, VERSION_N = 16, updMsg = "", updMsgAt = 0, updBusy = false;
+  function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
+  function checkUpdate() {
+    if (updBusy) return;
+    if (!navigator.onLine) { setUpd("אין חיבור לאינטרנט"); return; }
+    updBusy = true; setUpd("בודקת עדכון...");
+    fetch("sw.js?_=" + Date.now(), { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (t) {
+      var m = /CACHE = "orel-v(\d+)"/.exec(t);
+      if (m && +m[1] > VERSION_N) {
+        setUpd("יש גרסה חדשה, מעדכנת...");
+        var done = function () { setTimeout(function () { location.reload(); }, 1800); };
+        if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistration().then(function (reg) { if (reg) reg.update().then(done, done); else done(); }, done); else done();
+      } else { updBusy = false; setUpd("הגרסה מעודכנת"); }
+    }).catch(function () { updBusy = false; setUpd("אין חיבור לאינטרנט"); });
+  }
   function DF() { return DIFFS[diffIdx]; }
   var STATE_START = 0, STATE_PLAY = 1, STATE_OVER = 2;
   var state = STATE_START;
@@ -156,13 +170,14 @@
   function inMuteBtn(e) { return e.clientX > window.innerWidth * (W - 50) / W && e.clientY < window.innerHeight * 50 / H; }
   function diffBtnY(i) { return H * 0.36 + i * 62; }
   function settingsTap(lx, ly) {
-    for (var i = 0; i < DIFFS.length; i++) if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - diffBtnY(i)) < 26) { diffIdx = i; try { localStorage.setItem("orel_diff", DIFFS[i].key); } catch (e) {} reset(); return; }
-    if (Math.abs(lx - W / 2) < 90 && Math.abs(ly - (diffBtnY(2) + 80)) < 26) showSettings = false;
+    for (var i = 0; i < DIFFS.length; i++) if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - diffBtnY(i)) < 26) { diffIdx = i; try { localStorage.setItem("orel_diff", DIFFS[i].key); } catch (e) {} if (state === STATE_START) reset(); return; }
+    if (Math.abs(lx - W / 2) < 90 && Math.abs(ly - (diffBtnY(2) + 140)) < 26) showSettings = false;
+    else if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - (diffBtnY(2) + 76)) < 26) checkUpdate();
   }
   canvas.addEventListener("pointerdown", function (e) {
     e.preventDefault(); audioInit();
     if (inMuteBtn(e)) { setMuted(!muted); return; }
-    if (state === STATE_START) {
+    if (state !== STATE_PLAY) {
       var lx = e.clientX * W / window.innerWidth, ly = e.clientY * H / window.innerHeight;
       if (showSettings) { settingsTap(lx, ly); return; }
       if (lx < 56 && ly < 56) { showSettings = true; return; }
@@ -718,6 +733,24 @@
     ctx.restore();
   }
 
+  function drawSettings() {
+        ctx.fillStyle = "rgba(20,10,5,0.94)"; ctx.fillRect(0, 0, W, H);
+        ctx.font = "bold 28px Arial"; outlined("הגדרות", W / 2, H * 0.17, "#fff");
+        ctx.font = "18px Arial"; outlined("רמת קושי", W / 2, H * 0.25, "#ffe9cf");
+        for (var di = 0; di < DIFFS.length; di++) {
+          var by2 = diffBtnY(di), sel = di === diffIdx;
+          ctx.fillStyle = sel ? "#ffd54f" : "rgba(255,255,255,0.18)"; rr(W / 2 - 110, by2 - 24, 220, 48, 24); ctx.fill();
+          ctx.font = "bold 20px Arial"; ctx.fillStyle = sel ? "#3b2a10" : "#fff"; ctx.textAlign = "center"; ctx.fillText(DIFFS[di].label, W / 2, by2 + 7);
+        }
+        var ub = diffBtnY(2) + 76;
+        ctx.fillStyle = "rgba(255,255,255,0.18)"; rr(W / 2 - 110, ub - 24, 220, 48, 24); ctx.fill();
+        ctx.font = "bold 18px Arial"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText("עדכון גרסה", W / 2, ub + 6);
+        var bk = diffBtnY(2) + 140;
+        ctx.fillStyle = "rgba(255,255,255,0.28)"; rr(W / 2 - 90, bk - 24, 180, 48, 24); ctx.fill();
+        ctx.font = "bold 18px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("חזרה", W / 2, bk + 6);
+        ctx.font = "14px Arial"; ctx.fillStyle = "#ffe9cf"; ctx.fillText("גרסה: " + VERSION_N, W / 2, bk + 50);
+        if (updMsg) { ctx.font = "bold 15px Arial"; outlined(updMsg, W / 2, bk + 76, "#ffd54f"); }
+  }
   function draw() {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     var hf = state === STATE_START ? 0 : floorsAt(highestY);
@@ -791,20 +824,7 @@
       }
     } else if (state === STATE_START) {
       ctx.fillStyle = "rgba(30,15,8,0.55)"; ctx.fillRect(0, 0, W, H);
-      if (showSettings) {
-        ctx.fillStyle = "rgba(20,10,5,0.7)"; ctx.fillRect(0, 0, W, H);
-        ctx.font = "bold 28px Arial"; outlined("הגדרות", W / 2, H * 0.17, "#fff");
-        ctx.font = "18px Arial"; outlined("רמת קושי", W / 2, H * 0.25, "#ffe9cf");
-        for (var di = 0; di < DIFFS.length; di++) {
-          var by2 = diffBtnY(di), sel = di === diffIdx;
-          ctx.fillStyle = sel ? "#ffd54f" : "rgba(255,255,255,0.18)"; rr(W / 2 - 110, by2 - 24, 220, 48, 24); ctx.fill();
-          ctx.font = "bold 20px Arial"; ctx.fillStyle = sel ? "#3b2a10" : "#fff"; ctx.textAlign = "center"; ctx.fillText(DIFFS[di].label, W / 2, by2 + 7);
-        }
-        var bk = diffBtnY(2) + 80;
-        ctx.fillStyle = "rgba(255,255,255,0.28)"; rr(W / 2 - 90, bk - 24, 180, 48, 24); ctx.fill();
-        ctx.font = "bold 18px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("חזרה", W / 2, bk + 6);
-        return;
-      }
+      if (showSettings) { drawSettings(); return; }
       ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(30, 25, 15, 0, 6.2832); ctx.fill();
       ctx.font = "16px Arial"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText("⚙️", 30, 31);
       ctx.font = "bold 30px Arial"; outlined(T.title, W / 2, H * 0.30, "#fff");
@@ -836,6 +856,10 @@
         ctx.textAlign = "center";
       }
       ctx.font = "bold 20px Arial"; outlined(T.again, W / 2, Math.max(y + 48, H * 0.80), "#ffd54f");
+      ctx.font = "14px Arial"; outlined("רמה: " + DF().label, W / 2, Math.max(y + 48, H * 0.80) + 24, "#ffe9cf");
+      ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(30, 25, 15, 0, 6.2832); ctx.fill();
+      ctx.font = "16px Arial"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText("⚙️", 30, 31);
+      if (showSettings) drawSettings();
     }
   }
 
@@ -866,7 +890,7 @@
     state: function () { return state; }, score: function () { return score; }, items: function () { return itemsGot; },
     start: advance, hold: function (s) { held[s]++; }, release: function (s) { if (held[s] > 0) held[s]--; },
     player: function () { return { x: player.x, y: player.y, vx: player.vx, vy: player.vy }; },
-    stageSay: function (i) { sayStage(i); return stBufs.filter(Boolean).length; }, overSay: function () { sayOver(); return lastOver; }, overCount: function () { return overBufs.filter(Boolean).length; }, voices: function () { return voiceBufs.filter(Boolean).length + "/" + lastVoice; }, say: function () { lastVoiceAt = -99; sayVoice(); return lastVoice; },
+    stageSay: function (i) { sayStage(i); return stBufs.filter(Boolean).length; }, settings: function (v) { if (v !== undefined) showSettings = v; return showSettings; }, overSay: function () { sayOver(); return lastOver; }, overCount: function () { return overBufs.filter(Boolean).length; }, voices: function () { return voiceBufs.filter(Boolean).length + "/" + lastVoice; }, say: function () { lastVoiceAt = -99; sayVoice(); return lastVoice; },
     audioTest: function () { audioInit(); if (!ac) return "noaudio"; sfx.jump(3); sfx.collect(); sfx.mega(); sfx.stage(); sfx.combo(3); sfx.over(); return ac.state; },
     offline: function (secs) { var AC = window.OfflineAudioContext; var oac = new AC(1, 44100 * secs, 44100); var sa = ac, sm = master, smg = musicGain, ssg = sfxGain, snb = noiseBuf, sn = nextStepT, si = stepIdx;
       ac = oac; setupGraph(); nextStepT = 0.05; stepIdx = 0; scheduleMusic(secs - 0.1); sfx.jump(0); sfx.collect(); sfx.mega(); sfx.over();
