@@ -198,7 +198,7 @@
   function testBeep() { try { if (ac && ac.state === "running" && !muted) sfx.collect(); } catch (e) {} }
   window.addEventListener("load", makeSndBtn);
   // ---------- Slang voice clips (decoded after the first unlock, played through the same AudioContext) ----------
-  var overBufs = [], lastOver = -1, OVER_N = 13;
+  var stBufs = [], STAGE_VOICE_N = 6, overBufs = [], lastOver = -1, OVER_N = 13;
   var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16;
   function loadVoices() {
     if (voiceLoading || !ac) return; voiceLoading = true;
@@ -207,11 +207,23 @@
         ac.decodeAudioData(ab, function (b) { voiceBufs[n - 1] = b; }, function () {});
       }).catch(function () {});
     })(vi);
+    for (var si2 = 1; si2 <= STAGE_VOICE_N; si2++) (function (n) {
+      fetch("clips/st" + n + ".mp3").then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+        ac.decodeAudioData(ab, function (b) { stBufs[n - 1] = b; }, function () {});
+      }).catch(function () {});
+    })(si2);
     for (var oi = 1; oi <= OVER_N; oi++) (function (n) {
       fetch("clips/go" + n + ".mp3").then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
         ac.decodeAudioData(ab, function (b) { overBufs[n - 1] = b; }, function () {});
       }).catch(function () {});
     })(oi);
+  }
+  function sayStage(idx) { // announcer: the new stage's name, right after the stage jingle
+    if (!audioRunning() || muted || !stBufs[idx]) return;
+    if (!voiceGain) { voiceGain = ac.createGain(); voiceGain.gain.value = 1.5; voiceGain.connect(master); }
+    var src = ac.createBufferSource(); src.buffer = stBufs[idx]; src.connect(voiceGain); src.start(ac.currentTime + 0.55);
+    if (musicGain) { musicGain.gain.setTargetAtTime(0.2, ac.currentTime + 0.5, 0.05); setTimeout(function () { if (musicGain && ac) musicGain.gain.setTargetAtTime(0.5, ac.currentTime, 0.25); }, 550 + stBufs[idx].duration * 1000 + 150); }
+    lastVoiceAt = nowS() + 2.5;
   }
   function sayOver() { // game-over line, after the fall sound
     if (!audioRunning() || muted) return;
@@ -382,7 +394,7 @@
 
     var st = stageAt(highestY);
     if (st !== lastStage) {
-      if (lastStage !== -1 || score > 0) { bannerText = STAGES[st].name; bannerUntil = nowS() + 2.2; sfx.stage(); }
+      if (lastStage !== -1 || score > 0) { bannerText = STAGES[st].name; bannerUntil = nowS() + 2.2; sfx.stage(); sayStage(st); }
       lastStage = st;
     }
     if (player.y - camY > H + 40) { state = STATE_OVER; overAt = nowS(); sfx.over(); duckMusic(true); sayOver(); if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } }
@@ -774,7 +786,7 @@
     state: function () { return state; }, score: function () { return score; }, items: function () { return itemsGot; },
     start: advance, hold: function (s) { held[s]++; }, release: function (s) { if (held[s] > 0) held[s]--; },
     player: function () { return { x: player.x, y: player.y, vx: player.vx, vy: player.vy }; },
-    overSay: function () { sayOver(); return lastOver; }, overCount: function () { return overBufs.filter(Boolean).length; }, voices: function () { return voiceBufs.filter(Boolean).length + "/" + lastVoice; }, say: function () { lastVoiceAt = -99; sayVoice(); return lastVoice; },
+    stageSay: function (i) { sayStage(i); return stBufs.filter(Boolean).length; }, overSay: function () { sayOver(); return lastOver; }, overCount: function () { return overBufs.filter(Boolean).length; }, voices: function () { return voiceBufs.filter(Boolean).length + "/" + lastVoice; }, say: function () { lastVoiceAt = -99; sayVoice(); return lastVoice; },
     audioTest: function () { audioInit(); if (!ac) return "noaudio"; sfx.jump(3); sfx.collect(); sfx.mega(); sfx.stage(); sfx.combo(3); sfx.over(); return ac.state; },
     offline: function (secs) { var AC = window.OfflineAudioContext; var oac = new AC(1, 44100 * secs, 44100); var sa = ac, sm = master, smg = musicGain, ssg = sfxGain, snb = noiseBuf, sn = nextStepT, si = stepIdx;
       ac = oac; setupGraph(); nextStepT = 0.05; stepIdx = 0; scheduleMusic(secs - 0.1); sfx.jump(0); sfx.collect(); sfx.mega(); sfx.over();
