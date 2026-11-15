@@ -68,9 +68,11 @@
     { name: "הכלב", top: "#9bd8ff", bot: "#bfe8a4", plat: "biscuit", item: "biscuit", kinds: ["biscuit"], label: "ביסקוויטים" },
     { name: "צ'יפס", top: "#ffd34d", bot: "#f06a3a", plat: "fry", item: "fry", kinds: ["fry"], label: "צ'יפס" },
     { name: "שקיות מהסופר", top: "#bfe3f5", bot: "#e7f4fa", plat: "bag", item: "bag", kinds: ["bag"], label: "שקיות" },
-    { name: "קטאן", top: "#6fbfe6", bot: "#d9f0fa", plat: "catan", item: "card", kinds: ["card", "die"], label: "קטאן" }
+    { name: "קטאן", top: "#6fbfe6", bot: "#d9f0fa", plat: "catan", item: "card", kinds: ["card", "die"], label: "קטאן" },
+    { name: "פיתה זעתר", top: "#f8e6bb", bot: "#e0b573", plat: "pita", item: "jar", kinds: ["jar", "oil"], label: "זעתר" },
+    { name: "אסאי", top: "#f1dcf8", bot: "#b98ad6", plat: "acai", item: "berry", kinds: ["berry", "banana", "granola"], label: "אסאי" }
   ];
-  var ITEM_ROWS = [["pearl", "טפיוקה"], ["mug", "שוקו"], ["biscuit", "ביסקוויטים"], ["fry", "צ'יפס"], ["bag", "שקיות"], ["card", "קלפי משאבים"], ["die", "קוביות"]];
+  var ITEM_ROWS = [["pearl", "טפיוקה"], ["mug", "שוקו"], ["biscuit", "ביסקוויטים"], ["fry", "צ'יפס"], ["bag", "שקיות"], ["card", "קלפי משאבים"], ["die", "קוביות"], ["jar", "צנצנות זעתר"], ["oil", "שמן זית"], ["berry", "פירות יער"], ["banana", "בננה"], ["granola", "גרנולה"]];
   var RES = ["#2e8b3d", "#c8553d", "#f2c94c", "#a5e66f", "#8d98a6"];
   function stageCount(si) { var k = STAGES[si].kinds, n = 0; for (var i = 0; i < k.length; i++) n += itemCounts[k[i]] || 0; return n; }
 
@@ -216,7 +218,7 @@
   function testBeep() { try { if (ac && ac.state === "running" && !muted) sfx.collect(); } catch (e) {} }
   window.addEventListener("load", makeSndBtn);
   // ---------- Slang voice clips (decoded after the first unlock, played through the same AudioContext) ----------
-  var stBufs = [], STAGE_VOICE_N = 6, overBufs = [], lastOver = -1, OVER_N = 15;
+  var stBufs = [], STAGE_VOICE_N = 8, overBufs = [], lastOver = -1, OVER_N = 15;
   var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16;
   function loadVoices() {
     if (voiceLoading || !ac) return; voiceLoading = true;
@@ -519,6 +521,36 @@
       hexPath(0, 0, s, s * 0.87); ctx.fillStyle = RES[v % 5]; ctx.fill();
       ctx.strokeStyle = "rgba(90,59,26,0.7)"; ctx.lineWidth = 2; ctx.stroke();
       circle(0, 0, s * 0.17, "#fff3d6");
+    } else if (type === "jar") {
+      ctx.fillStyle = "rgba(235,245,235,0.9)"; rr(-s * 0.3, -s * 0.28, s * 0.6, s * 0.7, s * 0.1); ctx.fill();
+      ctx.fillStyle = "#6b7d2e"; rr(-s * 0.26, -s * 0.12, s * 0.52, s * 0.5, s * 0.08); ctx.fill();
+      ctx.fillStyle = "#8f5a2b"; for (var zi = 0; zi < 6; zi++) ctx.fillRect(-s * 0.2 + (zi % 3) * s * 0.17, -s * 0.04 + Math.floor(zi / 3) * s * 0.2, s * 0.06, s * 0.05);
+      ctx.fillStyle = "#c9a227"; rr(-s * 0.32, -s * 0.44, s * 0.64, s * 0.18, s * 0.05); ctx.fill();
+      ctx.fillStyle = "#fffdf0"; ctx.fillRect(-s * 0.17, s * 0.08, s * 0.34, s * 0.14);
+    } else if (type === "oil") {
+      ctx.fillStyle = "#5f8a2a"; rr(-s * 0.22, -s * 0.12, s * 0.44, s * 0.58, s * 0.12); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-s * 0.1, -s * 0.12); ctx.lineTo(-s * 0.07, -s * 0.38); ctx.lineTo(s * 0.07, -s * 0.38); ctx.lineTo(s * 0.1, -s * 0.12); ctx.fill();
+      ctx.fillStyle = "#222"; rr(-s * 0.09, -s * 0.47, s * 0.18, s * 0.11, 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.fillRect(-s * 0.15, -s * 0.05, s * 0.05, s * 0.4);
+      ctx.fillStyle = "#f3e7b0"; ctx.fillRect(-s * 0.17, s * 0.12, s * 0.34, s * 0.16);
+    } else if (type === "berry") {
+      circle(0, 0, s * 0.3, "#3a4aa8"); circle(-s * 0.1, -s * 0.1, s * 0.08, "rgba(255,255,255,0.45)");
+      ctx.fillStyle = "#222c70"; ctx.beginPath(); for (var bi = 0; bi < 5; bi++) { var ba = bi * 1.2566 - 1.57; ctx.lineTo(Math.cos(ba) * s * 0.1, -s * 0.05 + Math.sin(ba) * s * 0.1); ctx.lineTo(Math.cos(ba + 0.63) * s * 0.04, -s * 0.05 + Math.sin(ba + 0.63) * s * 0.04); } ctx.closePath(); ctx.fill();
+    } else if (type === "banana") {
+      circle(0, 0, s * 0.34, "#f6d54a"); circle(0, 0, s * 0.27, "#fff2b0"); circle(0, 0, s * 0.07, "#c9a02a");
+      for (var qi = 0; qi < 6; qi++) circle(Math.cos(qi * 1.047) * s * 0.17, Math.sin(qi * 1.047) * s * 0.17, s * 0.022, "#c9a02a");
+    } else if (type === "granola") {
+      ctx.fillStyle = "#c4903f"; ctx.beginPath(); ctx.ellipse(0, s * 0.05, s * 0.34, s * 0.24, 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#e0b667"; for (var gi = 0; gi < 7; gi++) { ctx.save(); ctx.translate(Math.cos(gi * 2.1) * s * 0.2, s * 0.05 + Math.sin(gi * 1.7) * s * 0.12); ctx.rotate(gi); rr(-s * 0.07, -s * 0.035, s * 0.14, s * 0.07, s * 0.03); ctx.fill(); ctx.restore(); }
+    } else if (type === "pita") {
+      circle(0, 0, s * 0.45, "#d9a95a"); circle(0, 0, s * 0.4, "#f0cd86");
+      ctx.fillStyle = "#4f7a2a"; for (var pi2 = 0; pi2 < 14; pi2++) ctx.fillRect(Math.cos(pi2 * 2.4) * s * 0.28 * ((pi2 % 3 + 1) / 3) - 1, Math.sin(pi2 * 2.4) * s * 0.28 * ((pi2 % 3 + 1) / 3) - 1, 2.2, 2.2);
+      ctx.fillStyle = "rgba(190,130,50,0.45)"; ctx.beginPath(); ctx.arc(s * 0.1, s * 0.12, s * 0.17, 0, 6.2832); ctx.fill();
+    } else if (type === "bowl") {
+      ctx.fillStyle = "#6b2a8c"; ctx.beginPath(); ctx.ellipse(0, -s * 0.08, s * 0.44, s * 0.12, 0, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-s * 0.44, -s * 0.08); ctx.quadraticCurveTo(-s * 0.4, s * 0.48, 0, s * 0.48); ctx.quadraticCurveTo(s * 0.4, s * 0.48, s * 0.44, -s * 0.08); ctx.closePath(); ctx.fillStyle = "#f5f0ea"; ctx.fill();
+      ctx.fillStyle = "#8a3fb0"; ctx.beginPath(); ctx.ellipse(0, -s * 0.1, s * 0.4, s * 0.1, 0, 0, 6.2832); ctx.fill();
+      circle(-s * 0.15, -s * 0.12, s * 0.06, "#fff2b0"); circle(s * 0.05, -s * 0.15, s * 0.05, "#3a4aa8"); circle(s * 0.22, -s * 0.1, s * 0.06, "#fff2b0");
     } else if (type === "paw") {
       circle(0, s * 0.15, s * 0.22, "rgba(110,70,40,0.35)");
       circle(-s * 0.25, -s * 0.12, s * 0.1, "rgba(110,70,40,0.35)"); circle(-s * 0.08, -s * 0.28, s * 0.1, "rgba(110,70,40,0.35)");
@@ -547,7 +579,9 @@
     ["biscuit", "paw", "paw", "biscuit", "paw", "biscuit", "paw", "paw"],
     ["carton", "fry", "fry", "carton", "fry", "fry", "fry", "carton"],
     ["bag", "bag", "bag", "bag", "bag", "bag", "bag", "bag"],
-    ["hex", "die", "card", "hex", "die", "card", "hex", "die"]
+    ["hex", "die", "card", "hex", "die", "card", "hex", "die"],
+    ["pita", "jar", "oil", "pita", "jar", "pita", "oil", "pita"],
+    ["bowl", "berry", "banana", "granola", "bowl", "berry", "banana", "granola"]
   ];
 
   function drawStageBG(si, alpha) {
@@ -560,8 +594,8 @@
       var type = list[k % list.length];
       var x = (k * 97 + si * 41) % (W - 20) + 10;
       var y = ((k * span / n + scroll * (0.6 + (k % 3) * 0.3)) % span) - 60;
-      var sz = (type === "cup" || type === "mug" || type === "carton" || type === "bag") ? 54 + (k % 3) * 14 : (type === "hex" ? 56 + (k % 3) * 12 : 22 + (k % 3) * 8);
-      ctx.globalAlpha = alpha * (type === "cup" || type === "mug" || type === "carton" || type === "bag" || type === "hex" ? 0.45 : 0.28);
+      var sz = (type === "cup" || type === "mug" || type === "carton" || type === "bag") ? 54 + (k % 3) * 14 : ((type === "hex" || type === "pita" || type === "bowl") ? 56 + (k % 3) * 12 : 22 + (k % 3) * 8);
+      ctx.globalAlpha = alpha * (type === "cup" || type === "mug" || type === "carton" || type === "bag" || type === "hex" || type === "pita" || type === "bowl" ? 0.45 : 0.28);
       drawThing(type, x, y, sz, k % 5);
     }
     if (si === 2) { // dog stage: the dog walks past in the background
@@ -591,6 +625,16 @@
       ctx.strokeStyle = "#4a2a1a"; ctx.lineWidth = 1;
       for (var x = p.x + 18; x < p.x + p.w - 4; x += 18) { ctx.beginPath(); ctx.moveTo(x, p.y); ctx.lineTo(x, p.y + p.h); ctx.stroke(); }
       ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(p.x + 2, p.y + 1, p.w - 4, 2);
+    } else if (t === "pita") {
+      ctx.fillStyle = "#c99345"; rr(p.x, p.y + 1, p.w, p.h, 6); ctx.fill();
+      ctx.fillStyle = "#efca82"; rr(p.x, p.y, p.w, p.h - 2, 6); ctx.fill();
+      ctx.fillStyle = "rgba(206,146,60,0.5)"; rr(p.x + 4, p.y + 2, p.w * 0.35, 4, 2); ctx.fill();
+      ctx.fillStyle = "#4f7a2a"; for (var zk = 0; zk < p.w / 9; zk++) ctx.fillRect(p.x + 4 + (zk * 37 + Math.floor(p.x)) % Math.max(10, p.w - 8), p.y + 2 + (zk * 5) % 7, 2, 2);
+      ctx.fillStyle = "rgba(255,230,120,0.7)"; ctx.fillRect(p.x + p.w * 0.6, p.y + 2, p.w * 0.18, 2);
+    } else if (t === "acai") {
+      ctx.fillStyle = "#4d1a68"; ctx.beginPath(); ctx.moveTo(p.x, p.y + 2); ctx.quadraticCurveTo(p.x + 3, p.y + p.h + 5, p.x + p.w / 2, p.y + p.h + 5); ctx.quadraticCurveTo(p.x + p.w - 3, p.y + p.h + 5, p.x + p.w, p.y + 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#8a3fb0"; rr(p.x, p.y, p.w, p.h - 3, 6); ctx.fill();
+      for (var ak = 0; ak < p.w / 14; ak++) { var axx = p.x + 6 + (ak * 29 + Math.floor(p.x)) % Math.max(10, p.w - 12), ty = ak % 3; if (ty === 0) circle(axx, p.y + 4, 2.3, "#fff2b0"); else if (ty === 1) circle(axx, p.y + 4, 2, "#3a4aa8"); else { ctx.fillStyle = "#e0b667"; ctx.fillRect(axx - 2, p.y + 3, 4, 2.5); } }
     } else if (t === "catan") {
       var n = Math.max(2, Math.round(p.w / 20)), tw = p.w / (1 + 0.78 * (n - 1)), th = 15;
       for (var ti = 0; ti < n; ti++) {
@@ -781,11 +825,12 @@
       ctx.font = "15px Arial"; outlined((nb ? T.newBest : T.best + best) + "   |   " + T.chain + bestChain, W / 2, y, nb ? "#ffd54f" : "#ffe9cf"); y += 30;
       // everything collected, per item type
       ctx.font = "bold 16px Arial"; outlined(itemsGot > 0 ? T.collected : T.nothing, W / 2, y, "#fff"); y += 8;
+      var nRows = 0; for (var rc = 0; rc < ITEM_ROWS.length; rc++) if (itemCounts[ITEM_ROWS[rc][0]]) nRows++;
       for (var ri2 = 0; ri2 < ITEM_ROWS.length; ri2++) {
         var kind = ITEM_ROWS[ri2][0], cnt = itemCounts[kind] || 0;
         if (!cnt) continue;
-        y += 25;
-        drawThing(kind, W / 2 + 84, y - 6, 20, 2);
+        y += nRows > 7 ? 21 : 25;
+        drawThing(kind, W / 2 + 84, y - 6, nRows > 7 ? 17 : 20, 2);
         ctx.font = "16px Arial"; ctx.textAlign = "right"; outlined(ITEM_ROWS[ri2][1], W / 2 + 62, y, "#ffe9cf");
         ctx.textAlign = "left"; ctx.font = "bold 17px Arial"; outlined("x" + cnt, W / 2 - 80, y, "#ffd54f");
         ctx.textAlign = "center";
