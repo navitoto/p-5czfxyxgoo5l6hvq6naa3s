@@ -65,7 +65,7 @@
   var STAGES = [
     { name: "תה קר עם כדורי טפיוקה", top: "#f6d7a7", bot: "#e9a35e", plat: "tea", item: "pearl", kinds: ["pearl"], label: "טפיוקה" },
     { name: "שוקו חם", top: "#5a3524", bot: "#2f1a11", plat: "choco", item: "mug", kinds: ["mug"], label: "שוקו" },
-    { name: "הכלב", top: "#9bd8ff", bot: "#bfe8a4", plat: "biscuit", item: "biscuit", kinds: ["biscuit"], label: "ביסקוויטים" },
+    { name: "ליאו הכלב", top: "#9bd8ff", bot: "#bfe8a4", plat: "biscuit", item: "biscuit", kinds: ["biscuit"], label: "ביסקוויטים" },
     { name: "צ'יפס", top: "#ffd34d", bot: "#f06a3a", plat: "fry", item: "fry", kinds: ["fry"], label: "צ'יפס" },
     { name: "שקיות מהסופר", top: "#bfe3f5", bot: "#e7f4fa", plat: "bag", item: "bag", kinds: ["bag"], label: "שקיות" },
     { name: "קטאן", top: "#6fbfe6", bot: "#d9f0fa", plat: "catan", item: "card", kinds: ["card", "die"], label: "קטאן" },
@@ -95,7 +95,7 @@
     { key: "hard", label: "קשה", wMul: 0.8, gapMul: 1.12, cam: 10.5, combo: 0.85 }
   ];
   var diffIdx = 1; try { var dk = localStorage.getItem("orel_diff"); for (var di0 = 0; di0 < DIFFS.length; di0++) if (DIFFS[di0].key === dk) diffIdx = di0; } catch (e) {}
-  var showSettings = false, VERSION_N = 16, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 17, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   function checkUpdate() {
     if (updBusy) return;
