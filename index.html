@@ -113,19 +113,27 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 20, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 21, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
+  var updNotice = "";
+  try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
+  function hardReset() { // remove every service worker and every cache, so the next load comes fresh from the network
+    var jobs = [];
+    try { if ("serviceWorker" in navigator) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })); } catch (e) {}
+    try { if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+    return Promise.all(jobs.map(function (j) { return j.catch(function () {}); }));
+  }
   function checkUpdate() {
     if (updBusy) return;
     if (!navigator.onLine) { setUpd("אין חיבור לאינטרנט"); return; }
-    updBusy = true; setUpd("בודקת עדכון...");
-    fetch("sw.js?_=" + Date.now(), { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (t) {
-      var m = /CACHE = "orel-v(\d+)"/.exec(t);
-      if (m && +m[1] > VERSION_N) {
-        setUpd("יש גרסה חדשה, מעדכנת...");
-        var done = function () { setTimeout(function () { location.reload(); }, 1800); };
-        if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistration().then(function (reg) { if (reg) reg.update().then(done, done); else done(); }, done); else done();
-      } else { updBusy = false; setUpd("הגרסה מעודכנת"); }
+    updBusy = true; setUpd("בודקת חיבור...");
+    // robots.txt is never cached by the service worker, so this really hits the network
+    fetch("robots.txt?_=" + Date.now(), { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function () {
+      setUpd("מעדכנת... רגע");
+      try { localStorage.setItem("orel_upd_from", String(VERSION_N)); } catch (e) {}
+      return hardReset();
+    }).then(function () {
+      setTimeout(function () { location.replace(location.pathname + "?v=" + Date.now()); }, 1200);
     }).catch(function () { updBusy = false; setUpd("אין חיבור לאינטרנט"); });
   }
   function DF() { return DIFFS[diffIdx]; }
@@ -915,6 +923,8 @@
       ctx.font = "16px Arial"; ctx.fillStyle = "#ffe9cf"; wrap(T.sub, W / 2, H * 0.40, W - 70, 24);
       ctx.font = "bold 20px Arial"; outlined(T.tap, W / 2, H * 0.68, "#ffd54f");
       if (!muted && !audioRunning()) { ctx.font = "15px Arial"; outlined("🔊 הקישי על המסך כדי להפעיל סאונד", W / 2, H * 0.68 + 32, "#ffffff"); }
+      ctx.font = "11px Arial"; ctx.globalAlpha = 0.7; outlined("גרסה " + VERSION_N, W / 2, H - 12, "#ffe9cf"); ctx.globalAlpha = 1;
+      if (updNotice && performance.now() < 9000) { ctx.font = "bold 15px Arial"; outlined(updNotice, W / 2, H * 0.75 + 30, "#7dff9b"); }
       ctx.font = "15px Arial"; outlined("רמה: " + DF().label, W / 2, H * 0.75 - (best > 0 ? 26 : 0), "#ffd54f");
       if (best > 0) { ctx.font = "15px Arial"; outlined(T.best + best, W / 2, H * 0.75, "#ffe9cf"); }
     } else {
@@ -991,7 +1001,7 @@
       platforms.push({ x: 0, y: player.y + 60, w: W, h: 12, stage: stageAt(player.y), dog: false, item: null }); }
   };
 })();
-if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js", { scope: "./" }).catch(function () {}); });
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js", { scope: "./", updateViaCache: "none" }).catch(function () {}); });
 </script>
 </body>
 </html>
