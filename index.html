@@ -87,6 +87,14 @@
   var HAPPY = ["a4", "a6", "a9", "a8", "a10", "a5", "a11"];
   var FALL = ["a2", "a3", "a7"];
   var FACE_SLEEP = "a1", FACE_START = "a6";
+  var OVER_FACES = [
+    ["a1", "אוף, נרדמת!"], ["a2", "נשיקה לליאו, ויאללה עוד פעם"], ["a3", "זה לא משעמם, חסר לי רק טפיוקה"],
+    ["a4", "נפלתי וצחקתי, המגדל עוד ישלם"], ["a5", "נפלתי, ואין לי אפילו כבשה לסחור בה"], ["a6", "סתם שוקו חם שנשפך, הכל טוב"],
+    ["a7", "שנייה, מי הזיז את שקיות מהסופר?"], ["a8", "צריכה עוד שלוק ואני חוזרת"], ["a9", "צ'יפס מתקן כל נפילה"],
+    ["a10", "ליאו היה קופץ יותר גבוה"], ["a11", "קורצת. זה היה בכוונה"]
+  ];
+  var overFaceIdx = 0, lastOverFace = -1;
+  function pickOverFace() { var i; do { i = Math.floor(Math.random() * OVER_FACES.length); } while (i === lastOverFace && OVER_FACES.length > 1); lastOverFace = i; overFaceIdx = i; }
 
   // ---------- State ----------
   var DIFFS = [
@@ -105,7 +113,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 19, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 20, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   function checkUpdate() {
     if (updBusy) return;
@@ -442,7 +450,7 @@
       if (lastStage !== -1 || score > 0) { bannerText = STAGES[st].name; bannerUntil = nowS() + 2.2; sfx.stage(); sayStage(st); }
       lastStage = st;
     }
-    if (player.y - camY > H + 40) { state = STATE_OVER; overAt = nowS(); sfx.over(); duckMusic(true); sayOver(); if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } }
+    if (player.y - camY > H + 40) { state = STATE_OVER; overAt = nowS(); pickOverFace(); sfx.over(); duckMusic(true); sayOver(); if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } }
     // face: happy going up, surprised when falling
     if (player.vy > 650) { if (FALL.indexOf(player.face) < 0) { player.face = pick(FALL); faceChangedAt = nowS(); } }
   }
@@ -912,10 +920,10 @@
     } else {
       ctx.fillStyle = "rgba(30,15,8,0.68)"; ctx.fillRect(0, 0, W, H);
       var fy = H * 0.05, fs = 120;
-      if (ready(FACE_SLEEP)) { ctx.drawImage(imgs[FACE_SLEEP], W / 2 - fs / 2, fy + 14, fs, fs); ctx.save(); ctx.translate(W / 2, fy + 14 + fs * 0.1); ctx.scale(2.6, 2.6); beanie(0, 0, 26); ctx.restore(); }
-      ctx.textAlign = "center"; ctx.font = "bold 20px Arial"; outlined("z z z", W / 2 + 78, fy + 24, "#cfe3ff");
+      var OF = OVER_FACES[overFaceIdx][0]; if (ready(OF)) { ctx.drawImage(imgs[OF], W / 2 - fs / 2, fy + 14, fs, fs); ctx.save(); ctx.translate(W / 2, fy + 14 + fs * 0.1); ctx.scale(2.6, 2.6); beanie(0, 0, 26); ctx.restore(); }
+      ctx.textAlign = "center"; if (overFaceIdx === 0) { ctx.font = "bold 20px Arial"; outlined("z z z", W / 2 + 78, fy + 24, "#cfe3ff"); }
       var y = fy + fs + 52;
-      ctx.font = "bold 28px Arial"; outlined(T.over, W / 2, y, "#fff"); y += 30;
+      var oc = OVER_FACES[overFaceIdx][1]; ctx.font = "bold 28px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 22px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 18px Arial"; outlined(oc, W / 2, y, "#fff"); y += 30;
       ctx.font = "19px Arial"; outlined(T.floors + score + "   |   " + T.points + pts, W / 2, y, "#ffe9cf"); y += 24;
       var nb = score >= best && score > 0;
       ctx.font = "15px Arial"; outlined((nb ? T.newBest : T.best + best) + "   |   " + T.chain + bestChain, W / 2, y, nb ? "#ffd54f" : "#ffe9cf"); y += 30;
@@ -973,7 +981,7 @@
       return oac.startRendering().then(function (buf) { var d = buf.getChannelData(0), pk = 0, sq = 0, i; for (i = 0; i < d.length; i++) { var a = Math.abs(d[i]); if (a > pk) pk = a; sq += d[i] * d[i]; } 
         var half = [0,0]; for (i = 0; i < d.length; i++) half[i < d.length / 2 ? 0 : 1] += d[i] * d[i];
         ac = sa; master = sm; musicGain = smg; sfxGain = ssg; noiseBuf = snb; nextStepT = sn; stepIdx = si; return { peak: pk, rms: Math.sqrt(sq / d.length), h1: half[0], h2: half[1], samples: Array.prototype.slice.call(d.subarray(0, 44100 * 6)).filter(function (_, k) { return k % 11 === 0; }).length }; }); },
-    over: function () { player.y = camY + H + 600; player.vy = 300; },
+    overFace: function (i) { overFaceIdx = i; lastOverFace = i; }, over: function () { player.y = camY + H + 600; player.vy = 300; },
     info: function () { return { chain: chain, mult: mult, best: bestChain, pts: pts, score: score, items: itemsGot, state: state, x: player.x, y: player.y }; },
     fakeItems: function (a) { itemCounts = {}; for (var q = 0; q < ITEM_ROWS.length; q++) if (a[q]) itemCounts[ITEM_ROWS[q][0]] = a[q]; a = a.slice(); itemsGot = a.reduce(function (x, y) { return x + y; }, 0); pts = 1240; bestChain = 9; },
     fakeChain: function (n) { chain = n; mult = 1 + Math.min(4, Math.floor(n / 4)); lastLandAt = nowS() + 100; meterShown = Math.min(1, n / 16); },
