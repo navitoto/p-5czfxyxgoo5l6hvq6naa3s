@@ -113,7 +113,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 22, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 23, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -143,7 +143,7 @@
   var player, platforms, camY, highestY, startY, score, best, comboText, comboUntil, particles, itemsGot, popups, lastLandY, runStartedAt = 0;
   var bannerText = "", bannerUntil = 0, lastStage = -1, faceChangedAt = 0;
   var itemCounts = {};
-  var chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0;
+  var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0;
   best = parseInt(localStorage.getItem("orel_best") || "0", 10) || 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }
@@ -173,7 +173,7 @@
     player = { x: W / 2, y: -20, vx: 0, vy: 0, r: 18, ground: ground, faceDir: 1, squash: 0, face: "a6" };
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
-    chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {};
+    chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null;
   }
 
   var restIdx = 0;
@@ -260,6 +260,7 @@
   window.addEventListener("load", makeSndBtn);
   // ---------- Slang voice clips (decoded after the first unlock, played through the same AudioContext) ----------
   var stBufs = [], STAGE_VOICE_N = 8, overBufs = [], lastOver = -1, OVER_N = 15;
+  var flipBufs = [], FLIP_N = 3;
   var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16;
   function loadVoices() {
     if (voiceLoading || !ac) return; voiceLoading = true;
@@ -268,6 +269,11 @@
         ac.decodeAudioData(ab, function (b) { voiceBufs[n - 1] = b; }, function () {});
       }).catch(function () {});
     })(vi);
+    for (var fi = 1; fi <= FLIP_N; fi++) (function (n) {
+      fetch("clips/e" + n + ".mp3").then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+        ac.decodeAudioData(ab, function (b) { flipBufs[n - 1] = b; }, function () {});
+      }).catch(function () {});
+    })(fi);
     for (var si2 = 1; si2 <= STAGE_VOICE_N; si2++) (function (n) {
       fetch("clips/st" + n + ".mp3").then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
         ac.decodeAudioData(ab, function (b) { stBufs[n - 1] = b; }, function () {});
@@ -295,6 +301,16 @@
     var src = ac.createBufferSource(); src.buffer = overBufs[k]; src.connect(voiceGain); src.start(ac.currentTime + 0.6);
     if (musicGain) { musicGain.gain.setTargetAtTime(0.08, ac.currentTime + 0.5, 0.05); setTimeout(function () { if (musicGain && ac) musicGain.gain.setTargetAtTime(0.22, ac.currentTime, 0.3); }, 600 + overBufs[k].duration * 1000 + 150); }
     lastVoiceAt = nowS() + 2;
+  }
+  var lastFlipClip = -1;
+  function sayFlip() { // excited clip for acrobatics, always plays (ducks music), respects mute
+    if (!audioRunning() || muted) return;
+    var ok = []; for (var i = 0; i < flipBufs.length; i++) if (flipBufs[i] && i !== lastFlipClip) ok.push(i);
+    if (!ok.length) return;
+    var k = pick(ok); lastFlipClip = k; lastVoiceAt = nowS() + 1.5;
+    if (!voiceGain) { voiceGain = ac.createGain(); voiceGain.gain.value = 1.5; voiceGain.connect(master); }
+    var src = ac.createBufferSource(); src.buffer = flipBufs[k]; src.connect(voiceGain); src.start(ac.currentTime + 0.05);
+    if (musicGain) { musicGain.gain.setTargetAtTime(0.12, ac.currentTime, 0.05); setTimeout(function () { if (musicGain && ac) musicGain.gain.setTargetAtTime(0.5, ac.currentTime, 0.25); }, flipBufs[k].duration * 1000 + 150); }
   }
   function sayVoice() {
     if (!audioRunning() || muted) return;
@@ -441,6 +457,10 @@
     if (chain > 0 && nowS() - lastLandAt > 1.3) breakChain();
     var tgt = chain > 0 ? Math.min(1, chain / 16) * Math.max(0, Math.min(1, 1 - (nowS() - lastLandAt - 0.8) / 0.5)) : 0;
     meterShown += (tgt - meterShown) * Math.min(1, dt * 10);
+    if (flip) {
+      flip.t += dt;
+      if (flip.t < flip.dur + 0.1) for (var fq = 0; fq < 2; fq++) { var fa = rand(0, 6.283); particles.push({ x: player.x + Math.cos(fa) * 26, y: player.y + Math.sin(fa) * 26, vx: rand(-60, 60), vy: rand(-60, 40), life: rand(0.3, 0.6), max: 0.6, c: Math.random() < 0.5 ? "255,236,110" : "255,255,255" }); }
+    }
     if (breakFlash > 0) breakFlash = Math.max(0, breakFlash - dt * 2);
     if (player.squash > 0) player.squash = Math.max(0, player.squash - dt * 6);
     var target = player.y - H * 0.42;
@@ -470,12 +490,14 @@
 
   function land(p) {
     var gained = Math.max(0, Math.round((lastLandY - p.y) / 100));
+    var flipNow = false; flip = null;
     var higher = p.y < lastLandY - 5, tN = nowS(), fast = lastLandAt > 0 && (tN - lastLandAt) < DF().combo;
     lastLandY = p.y; player.y = p.y - player.r;
     if (higher && fast) {
       chain++; if (chain > bestChain) bestChain = chain;
       var nm = 1 + Math.min(4, Math.floor(chain / 4));
-      if (chain > 0 && chain % 3 === 0) sayVoice();
+      flipNow = chain >= 8 && chain % 4 === 0;
+      if (chain > 0 && chain % 3 === 0 && !flipNow) sayVoice();
       if (nm > mult) { mult = nm; sfx.combo(mult); popups.push({ x: player.x, y: player.y - 40, t: 1.0, txt: T.comboLbl + " x" + mult + "!" }); }
     } else if (higher && lastLandAt === 0) { chain = 0; }
     else { breakChain(); }
@@ -487,7 +509,15 @@
     if (p.dog) { sfx.mega(); pts += 100 * mult; player.vy = -(BASE_JUMP * 1.75 + boost * 0.3); popups.push({ x: p.x + p.w / 2, y: p.y - 60, t: 1.1, txt: T.dog }); }
     player.squash = 1; if (nowS() - faceChangedAt > 3 || FALL.indexOf(player.face) >= 0) { var nf; do { nf = pick(HAPPY); } while (nf === player.face && HAPPY.length > 1); player.face = nf; faceChangedAt = nowS(); }
     for (var i = 0; i < 6; i++) particles.push({ x: player.x + rand(-8, 8), y: p.y, vx: rand(-120, 120), vy: rand(-160, -20), life: rand(0.2, 0.45), max: 0.45, c: "255,255,255" });
-    if (gained >= 2) sayVoice();
+    if (gained >= 2 && !flipNow) sayVoice();
+    if (flipNow) {
+      var air = 2 * Math.abs(player.vy) / GRAVITY, full = chain % 16 === 0;
+      var turns = Math.max(full ? 2 : 1, Math.min(3, Math.round(air / 0.5)));
+      flip = { t: 0, dur: air * 0.86, turns: turns, dir: player.faceDir >= 0 ? 1 : -1 };
+      var bonus = 100 * mult * turns; pts += bonus;
+      popups.push({ x: player.x, y: player.y - 70, t: 1.4, txt: flipTxt + " +" + bonus });
+      sayFlip();
+    }
     if (gained >= 2) { comboText = T.combo + gained + "!"; comboUntil = nowS() + 1.2; }
   }
 
@@ -869,6 +899,7 @@
     var fname = state === STATE_OVER ? FACE_SLEEP : (state === STATE_START ? FACE_START : player.face);
     var hg = ctx.createRadialGradient(0, 0, 8, 0, 0, 46); hg.addColorStop(0, "rgba(255,255,255,0.42)"); hg.addColorStop(1, "rgba(255,255,255,0)"); ctx.fillStyle = hg; ctx.fillRect(-50, -50, 100, 100);
     ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.beginPath(); ctx.ellipse(0, player.r + 10, player.r * 0.9, 4, 0, 0, 6.2832); ctx.fill();
+    if (flip) { var fp = Math.min(1, flip.t / flip.dur); fp = fp * fp * (3 - 2 * fp); ctx.rotate(flip.dir * 6.2832 * flip.turns * fp); }
     drawHarold(fname, player.vy < -50 ? 1 : (player.vy > 500 ? 2 : 0), player.vx, nowS());
     ctx.restore();
     for (var m = 0; m < popups.length; m++) {
@@ -999,6 +1030,8 @@
     overFace: function (i) { overFaceIdx = i; lastOverFace = i; }, over: function () { player.y = camY + H + 600; player.vy = 300; },
     info: function () { return { chain: chain, mult: mult, best: bestChain, pts: pts, score: score, items: itemsGot, state: state, x: player.x, y: player.y }; },
     fakeItems: function (a) { itemCounts = {}; for (var q = 0; q < ITEM_ROWS.length; q++) if (a[q]) itemCounts[ITEM_ROWS[q][0]] = a[q]; a = a.slice(); itemsGot = a.reduce(function (x, y) { return x + y; }, 0); pts = 1240; bestChain = 9; },
+    fakeFlip: function (n, t) { flip = { t: t || 0, dur: 0.5, turns: n || 1, dir: 1 }; },
+    flipInfo: function () { return flip; },
     fakeChain: function (n) { chain = n; mult = 1 + Math.min(4, Math.floor(n / 4)); lastLandAt = nowS() + 100; meterShown = Math.min(1, n / 16); },
     platformsList: function () { return platforms; },
     teleportFloors: function (f) { var dy = -f * 100 - player.y; player.y += dy; camY += dy; highestY = player.y; score = f; lastLandY = startY - f * 100;
