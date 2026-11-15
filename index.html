@@ -93,6 +93,8 @@
     ["a7", "שנייה, מי הזיז את שקיות מהסופר?"], ["a8", "צריכה עוד שלוק ואני חוזרת"], ["a9", "צ'יפס מתקן כל נפילה"],
     ["a10", "ליאו היה קופץ יותר גבוה"], ["a11", "קורצת. זה היה בכוונה"]
   ];
+  // per-photo beanie fit: [centre x (fraction of photo), cuff-top y (fraction), width (px at 120px photo), tilt (deg, + = clockwise)]
+  var OVER_HAT = [[0.5,0.15,68,-4],[0.5,0.14,66,-2],[0.52,0.2,64,-8],[0.52,0.15,68,-3],[0.46,0.22,60,-14],[0.5,0.18,66,-3],[0.5,0.24,64,-6],[0.52,0.19,68,-18],[0.5,0.18,66,-3],[0.5,0.2,70,4],[0.5,0.17,60,3]];
   var overFaceIdx = 0, lastOverFace = -1;
   function pickOverFace() { var i; do { i = Math.floor(Math.random() * OVER_FACES.length); } while (i === lastOverFace && OVER_FACES.length > 1); lastOverFace = i; overFaceIdx = i; }
 
@@ -113,7 +115,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 23, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 24, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -966,7 +968,7 @@
     } else {
       ctx.fillStyle = "rgba(30,15,8,0.68)"; ctx.fillRect(0, 0, W, H);
       var fy = H * 0.05, fs = 120;
-      var OF = OVER_FACES[overFaceIdx][0]; if (ready(OF)) { ctx.drawImage(imgs[OF], W / 2 - fs / 2, fy + 14, fs, fs); ctx.save(); ctx.translate(W / 2, fy + 14 + fs * 0.1); ctx.scale(2.6, 2.6); beanie(0, 0, 26); ctx.restore(); }
+      var OF = OVER_FACES[overFaceIdx][0]; if (ready(OF)) { ctx.drawImage(imgs[OF], W / 2 - fs / 2, fy + 14, fs, fs); var oh = OVER_HAT[overFaceIdx]; ctx.save(); ctx.translate(W / 2 - fs / 2 + oh[0] * fs, fy + 14 + oh[1] * fs); ctx.rotate(oh[3] * Math.PI / 180); var hs = oh[2] / 26 / 2.6 * 2.6; ctx.scale(hs, hs); beanie(0, 0, 26); ctx.restore(); }
       ctx.textAlign = "center"; if (overFaceIdx === 0) { ctx.font = "bold 20px Arial"; outlined("z z z", W / 2 + 78, fy + 24, "#cfe3ff"); }
       var y = fy + fs + 52;
       var oc = OVER_FACES[overFaceIdx][1]; ctx.font = "bold 28px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 22px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 18px Arial"; outlined(oc, W / 2, y, "#fff"); y += 30;
