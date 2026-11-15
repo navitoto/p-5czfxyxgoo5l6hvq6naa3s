@@ -1,4 +1,4 @@
-var CACHE = "orel-v7";
+var CACHE = "orel-v8";
 var ASSETS = ["./", "index.html", "manifest.webmanifest", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png", "img/icon.png", "img/d1.webp", "img/d2.webp"];
 for (var i = 1; i <= 11; i++) ASSETS.push("img/a" + i + ".webp");
 for (var j = 1; j <= 16; j++) ASSETS.push("clips/v" + j + ".mp3");
