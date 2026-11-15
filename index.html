@@ -9,8 +9,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="המגדל">
-<link rel="icon" href="img/icon.png">
-<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>המגדל</title>
 <style>
   html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#2b1a12; touch-action:none; overscroll-behavior:none;
@@ -195,6 +197,26 @@
   }
   function testBeep() { try { if (ac && ac.state === "running" && !muted) sfx.collect(); } catch (e) {} }
   window.addEventListener("load", makeSndBtn);
+  // ---------- Slang voice clips (decoded after the first unlock, played through the same AudioContext) ----------
+  var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16;
+  function loadVoices() {
+    if (voiceLoading || !ac) return; voiceLoading = true;
+    for (var vi = 1; vi <= VOICE_N; vi++) (function (n) {
+      fetch("clips/v" + n + ".mp3").then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+        ac.decodeAudioData(ab, function (b) { voiceBufs[n - 1] = b; }, function () {});
+      }).catch(function () {});
+    })(vi);
+  }
+  function sayVoice() {
+    if (!audioRunning() || muted) return;
+    var t = nowS(); if (t - lastVoiceAt < 4.5) return;
+    var ok = []; for (var i = 0; i < voiceBufs.length; i++) if (voiceBufs[i] && i !== lastVoice) ok.push(i);
+    if (!ok.length) return;
+    var k = pick(ok); lastVoice = k; lastVoiceAt = t;
+    if (!voiceGain) { voiceGain = ac.createGain(); voiceGain.gain.value = 1.5; voiceGain.connect(master); }
+    var src = ac.createBufferSource(); src.buffer = voiceBufs[k]; src.connect(voiceGain); src.start(ac.currentTime + 0.05);
+    if (musicGain) { musicGain.gain.setTargetAtTime(0.2, ac.currentTime, 0.05); setTimeout(function () { if (musicGain && ac) musicGain.gain.setTargetAtTime(0.5, ac.currentTime, 0.25); }, voiceBufs[k].duration * 1000 + 150); }
+  }
   function audioRunning() { return !!ac && ac.state === "running"; }
   var wasRunning = false; setInterval(function () { var r = audioRunning(); if (r && !wasRunning) setTimeout(testBeep, 150); wasRunning = r; }, 300);
   ["touchstart", "touchend", "pointerup", "click", "mousedown", "keydown"].forEach(function (ev) {
@@ -217,7 +239,7 @@
     if (ac) { if (ac.state !== "running") { try { var rp = ac.resume(); if (rp && rp.catch) rp.catch(function () {}); } catch (e) {} } return; }
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
-    try { ac = new AC(); setupGraph(); ac.resume(); try { var ub = ac.createBuffer(1, 1, 22050), us = ac.createBufferSource(); us.buffer = ub; us.connect(ac.destination); us.start(0); } catch (e) {} startMusic(); } catch (e) { ac = null; }
+    try { ac = new AC(); setupGraph(); ac.resume(); try { var ub = ac.createBuffer(1, 1, 22050), us = ac.createBufferSource(); us.buffer = ub; us.connect(ac.destination); us.start(0); } catch (e) {} startMusic(); loadVoices(); } catch (e) { ac = null; }
   }
   function tone(freq, t, dur, type, vol, dest, freqEnd) {
     var o = ac.createOscillator(), g = ac.createGain();
@@ -364,6 +386,7 @@
     if (higher && fast) {
       chain++; if (chain > bestChain) bestChain = chain;
       var nm = 1 + Math.min(4, Math.floor(chain / 4));
+      if (chain > 0 && chain % 3 === 0) sayVoice();
       if (nm > mult) { mult = nm; sfx.combo(mult); popups.push({ x: player.x, y: player.y - 40, t: 1.0, txt: T.comboLbl + " x" + mult + "!" }); }
     } else if (higher && lastLandAt === 0) { chain = 0; }
     else { breakChain(); }
@@ -375,6 +398,7 @@
     if (p.dog) { sfx.mega(); pts += 100 * mult; player.vy = -(BASE_JUMP * 1.75 + boost * 0.3); popups.push({ x: p.x + p.w / 2, y: p.y - 60, t: 1.1, txt: T.dog }); }
     player.squash = 1; if (nowS() - faceChangedAt > 3 || FALL.indexOf(player.face) >= 0) { var nf; do { nf = pick(HAPPY); } while (nf === player.face && HAPPY.length > 1); player.face = nf; faceChangedAt = nowS(); }
     for (var i = 0; i < 6; i++) particles.push({ x: player.x + rand(-8, 8), y: p.y, vx: rand(-120, 120), vy: rand(-160, -20), life: rand(0.2, 0.45), max: 0.45, c: "255,255,255" });
+    if (gained >= 2) sayVoice();
     if (gained >= 2) { comboText = T.combo + gained + "!"; comboUntil = nowS() + 1.2; }
   }
 
@@ -734,6 +758,7 @@
     state: function () { return state; }, score: function () { return score; }, items: function () { return itemsGot; },
     start: advance, hold: function (s) { held[s]++; }, release: function (s) { if (held[s] > 0) held[s]--; },
     player: function () { return { x: player.x, y: player.y, vx: player.vx, vy: player.vy }; },
+    voices: function () { return voiceBufs.filter(Boolean).length + "/" + lastVoice; }, say: function () { lastVoiceAt = -99; sayVoice(); return lastVoice; },
     audioTest: function () { audioInit(); if (!ac) return "noaudio"; sfx.jump(3); sfx.collect(); sfx.mega(); sfx.stage(); sfx.combo(3); sfx.over(); return ac.state; },
     offline: function (secs) { var AC = window.OfflineAudioContext; var oac = new AC(1, 44100 * secs, 44100); var sa = ac, sm = master, smg = musicGain, ssg = sfxGain, snb = noiseBuf, sn = nextStepT, si = stepIdx;
       ac = oac; setupGraph(); nextStepT = 0.05; stepIdx = 0; scheduleMusic(secs - 0.1); sfx.jump(0); sfx.collect(); sfx.mega(); sfx.over();
@@ -750,6 +775,7 @@
       platforms.push({ x: 0, y: player.y + 60, w: W, h: 12, stage: stageAt(player.y), dog: false, item: null }); }
   };
 })();
+if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js", { scope: "./" }).catch(function () {}); });
 </script>
 </body>
 </html>
