@@ -56,7 +56,7 @@
   // ---------- Stages ----------
   var STAGE_FLOORS = 25;
   var STAGES = [
-    { name: "תה קר עם פנינים", top: "#f6d7a7", bot: "#e9a35e", plat: "tea", item: "pearl", label: "פנינים" },
+    { name: "תה קר עם כדורי טפיוקה", top: "#f6d7a7", bot: "#e9a35e", plat: "tea", item: "pearl", label: "טפיוקה" },
     { name: "שוקו חם", top: "#5a3524", bot: "#2f1a11", plat: "choco", item: "marsh", label: "מרשמלו" },
     { name: "הכלב", top: "#9bd8ff", bot: "#bfe8a4", plat: "bone", item: "bone", label: "עצמות" },
     { name: "צ'יפס", top: "#ffd34d", bot: "#f06a3a", plat: "fry", item: "fry", label: "צ'יפסים" },
@@ -404,7 +404,7 @@
       var S = STAGES[stageAt(highestY)];
       ctx.fillStyle = "rgba(0,0,0,0.4)"; rr(10, 10, 96, 28, 10); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.font = "bold 13px Arial"; ctx.textAlign = "center"; ctx.fillText(S.label + ": " + itemsGot, 58, 29);
-      if (bannerUntil > nowS()) { ctx.globalAlpha = Math.min(1, (bannerUntil - nowS()) * 1.5); ctx.font = "bold 24px Arial"; outlined(bannerText, W / 2, H * 0.22, "#fff"); ctx.globalAlpha = 1; }
+      if (bannerUntil > nowS()) { ctx.globalAlpha = Math.min(1, (bannerUntil - nowS()) * 1.5); ctx.font = "bold 24px Arial"; if (ctx.measureText(bannerText).width > W - 30) ctx.font = "bold 20px Arial"; outlined(bannerText, W / 2, H * 0.22, "#fff"); ctx.globalAlpha = 1; }
       if (comboText && nowS() < comboUntil) { ctx.font = "bold 20px Arial"; outlined(comboText, W / 2, H * 0.32, "#ffd54f"); }
       if (nowS() - runStartedAt < 5) {
         ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.font = "16px Arial";
