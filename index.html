@@ -87,6 +87,14 @@
   var FACE_SLEEP = "a1", FACE_START = "a6";
 
   // ---------- State ----------
+  var DIFFS = [
+    { key: "easy", label: "קל", wMul: 1.3, gapMul: 0.85, cam: 6.5, combo: 1.6 },
+    { key: "mid", label: "בינוני", wMul: 1, gapMul: 1, cam: 8, combo: 1.15 },
+    { key: "hard", label: "קשה", wMul: 0.8, gapMul: 1.12, cam: 10.5, combo: 0.85 }
+  ];
+  var diffIdx = 1; try { var dk = localStorage.getItem("orel_diff"); for (var di0 = 0; di0 < DIFFS.length; di0++) if (DIFFS[di0].key === dk) diffIdx = di0; } catch (e) {}
+  var showSettings = false;
+  function DF() { return DIFFS[diffIdx]; }
   var STATE_START = 0, STATE_PLAY = 1, STATE_OVER = 2;
   var state = STATE_START;
   var GRAVITY = 2400, MOVE_ACCEL = 2600, MAX_RUN = 300, FRICTION = 1800, BASE_JUMP = 700, SPEED_JUMP_BONUS = 1.35, WALL_KEEP = 0.85;
@@ -106,7 +114,7 @@
   function makePlatform(y, forceWide) {
     var fl = floorsAt(y);
     var difficulty = Math.min(1, fl * 100 / 6000);
-    var w = forceWide ? W : rand(110 - 45 * difficulty, 150 - 55 * difficulty);
+    var w = forceWide ? W : Math.min(W - 16, rand(110 - 45 * difficulty, 150 - 55 * difficulty) * DF().wMul);
     var x = forceWide ? 0 : rand(8, W - 8 - w);
     var p = { x: x, y: y, w: w, h: 12, stage: stageAt(y), dog: false, item: null };
     if (!forceWide && fl > 4 && Math.random() < 0.07) p.dog = true;
@@ -119,7 +127,7 @@
     var ground = { x: 0, y: 0, w: W, h: 14, stage: 0, dog: false, item: null };
     platforms.push(ground);
     var y = 0, first = true;
-    while (y > -H * 1.2 - 200) { y -= rand(75, 105); platforms.push(makePlatform(y, first)); first = false; }
+    while (y > -H * 1.2 - 200) { y -= rand(75, 105) * DF().gapMul; platforms.push(makePlatform(y, first)); first = false; }
     player = { x: W / 2, y: -20, vx: 0, vy: 0, r: 18, ground: ground, faceDir: 1, squash: 0, face: "a6" };
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
@@ -130,7 +138,7 @@
   function ensurePlatforms() {
     var top = platforms[platforms.length - 1];
     while (top.y > camY - 300) {
-      var gap = rand(75, 110 + Math.min(30, (startY - top.y) / 400));
+      var gap = rand(75, 110 + Math.min(30, (startY - top.y) / 400)) * DF().gapMul;
       var ny = top.y - gap, nf = Math.floor(floorsAt(ny) / STAGE_FLOORS);
       if (nf > restIdx) { restIdx = nf; top = makePlatform(ny, true); top.rest = true; top.h = 26; top.restFloor = nf * STAGE_FLOORS; }
       else top = makePlatform(ny, false);
@@ -144,9 +152,19 @@
   function sideOf(x) { return x < window.innerWidth / 2 ? "left" : "right"; }
   var ptrs = {};
   function inMuteBtn(e) { return e.clientX > window.innerWidth * (W - 50) / W && e.clientY < window.innerHeight * 50 / H; }
+  function diffBtnY(i) { return H * 0.36 + i * 62; }
+  function settingsTap(lx, ly) {
+    for (var i = 0; i < DIFFS.length; i++) if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - diffBtnY(i)) < 26) { diffIdx = i; try { localStorage.setItem("orel_diff", DIFFS[i].key); } catch (e) {} reset(); return; }
+    if (Math.abs(lx - W / 2) < 90 && Math.abs(ly - (diffBtnY(2) + 80)) < 26) showSettings = false;
+  }
   canvas.addEventListener("pointerdown", function (e) {
     e.preventDefault(); audioInit();
     if (inMuteBtn(e)) { setMuted(!muted); return; }
+    if (state === STATE_START) {
+      var lx = e.clientX * W / window.innerWidth, ly = e.clientY * H / window.innerHeight;
+      if (showSettings) { settingsTap(lx, ly); return; }
+      if (lx < 56 && ly < 56) { showSettings = true; return; }
+    }
     if (state !== STATE_PLAY) { advance(); return; }
     var sd = sideOf(e.clientX); ptrs[e.pointerId] = sd; held[sd]++;
   });
@@ -193,7 +211,7 @@
       setTimeout(function () { if (!audioRunning()) sndBtn.textContent = "🔇 עדיין אין סאונד - בדקי שמצב שקט כבוי והעוצמה למעלה, ואז הקישי שוב"; }, 1200); };
     sndBtn.addEventListener("touchend", go); sndBtn.addEventListener("click", function (e) { e.stopPropagation(); });
     document.body.appendChild(sndBtn);
-    setInterval(function () { sndBtn.style.display = (!muted && !audioRunning()) ? "block" : "none"; if (audioRunning()) sndTries = 0; }, 400);
+    setInterval(function () { sndBtn.style.display = (!muted && !audioRunning() && !showSettings) ? "block" : "none"; if (audioRunning()) sndTries = 0; }, 400);
   }
   function testBeep() { try { if (ac && ac.state === "running" && !muted) sfx.collect(); } catch (e) {} }
   window.addEventListener("load", makeSndBtn);
@@ -383,7 +401,7 @@
     if (breakFlash > 0) breakFlash = Math.max(0, breakFlash - dt * 2);
     if (player.squash > 0) player.squash = Math.max(0, player.squash - dt * 6);
     var target = player.y - H * 0.42;
-    if (target < camY) camY += (target - camY) * Math.min(1, dt * 8);
+    if (target < camY) camY += (target - camY) * Math.min(1, dt * DF().cam);
     if (player.y < highestY) { highestY = player.y; score = Math.max(score, Math.floor((startY - highestY) / 100)); }
     ensurePlatforms();
     for (var j = particles.length - 1; j >= 0; j--) {
@@ -409,7 +427,7 @@
 
   function land(p) {
     var gained = Math.max(0, Math.round((lastLandY - p.y) / 100));
-    var higher = p.y < lastLandY - 5, tN = nowS(), fast = lastLandAt > 0 && (tN - lastLandAt) < 1.15;
+    var higher = p.y < lastLandY - 5, tN = nowS(), fast = lastLandAt > 0 && (tN - lastLandAt) < DF().combo;
     lastLandY = p.y; player.y = p.y - player.r;
     if (higher && fast) {
       chain++; if (chain > bestChain) bestChain = chain;
@@ -729,10 +747,27 @@
       }
     } else if (state === STATE_START) {
       ctx.fillStyle = "rgba(30,15,8,0.55)"; ctx.fillRect(0, 0, W, H);
+      if (showSettings) {
+        ctx.fillStyle = "rgba(20,10,5,0.7)"; ctx.fillRect(0, 0, W, H);
+        ctx.font = "bold 28px Arial"; outlined("הגדרות", W / 2, H * 0.17, "#fff");
+        ctx.font = "18px Arial"; outlined("רמת קושי", W / 2, H * 0.25, "#ffe9cf");
+        for (var di = 0; di < DIFFS.length; di++) {
+          var by2 = diffBtnY(di), sel = di === diffIdx;
+          ctx.fillStyle = sel ? "#ffd54f" : "rgba(255,255,255,0.18)"; rr(W / 2 - 110, by2 - 24, 220, 48, 24); ctx.fill();
+          ctx.font = "bold 20px Arial"; ctx.fillStyle = sel ? "#3b2a10" : "#fff"; ctx.textAlign = "center"; ctx.fillText(DIFFS[di].label, W / 2, by2 + 7);
+        }
+        var bk = diffBtnY(2) + 80;
+        ctx.fillStyle = "rgba(255,255,255,0.28)"; rr(W / 2 - 90, bk - 24, 180, 48, 24); ctx.fill();
+        ctx.font = "bold 18px Arial"; ctx.fillStyle = "#fff"; ctx.fillText("חזרה", W / 2, bk + 6);
+        return;
+      }
+      ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(30, 25, 15, 0, 6.2832); ctx.fill();
+      ctx.font = "16px Arial"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText("⚙️", 30, 31);
       ctx.font = "bold 30px Arial"; outlined(T.title, W / 2, H * 0.30, "#fff");
       ctx.font = "16px Arial"; ctx.fillStyle = "#ffe9cf"; wrap(T.sub, W / 2, H * 0.40, W - 70, 24);
       ctx.font = "bold 20px Arial"; outlined(T.tap, W / 2, H * 0.68, "#ffd54f");
       if (!muted && !audioRunning()) { ctx.font = "15px Arial"; outlined("🔊 הקישי על המסך כדי להפעיל סאונד", W / 2, H * 0.68 + 32, "#ffffff"); }
+      ctx.font = "15px Arial"; outlined("רמה: " + DF().label, W / 2, H * 0.75 - (best > 0 ? 26 : 0), "#ffd54f");
       if (best > 0) { ctx.font = "15px Arial"; outlined(T.best + best, W / 2, H * 0.75, "#ffe9cf"); }
     } else {
       ctx.fillStyle = "rgba(30,15,8,0.68)"; ctx.fillRect(0, 0, W, H);
