@@ -115,7 +115,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 26, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 27, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -424,8 +424,24 @@
   function duckMusic(low) { if (musicGain) musicGain.gain.setTargetAtTime(low ? 0.22 : 0.5, ac.currentTime, 0.15); }
   document.addEventListener("visibilitychange", function () {
     if (!ac) return;
-    if (document.hidden) { ac.suspend(); if (silentEl) silentEl.pause(); } else { ensureSilentEl(); ac.resume(); }
+    if (document.hidden) goQuiet(); else wakeAudio();
   });
+  // Lock screen / background: remove the silent <audio> completely (a paused one stays registered as a Now Playing widget on iOS) and clear the media session.
+  function clearMediaSession() {
+    try { var ms = navigator.mediaSession; if (ms) { ms.metadata = null; ms.playbackState = "none"; ["play", "pause", "stop", "previoustrack", "nexttrack", "seekbackward", "seekforward", "seekto"].forEach(function (a) { try { ms.setActionHandler(a, null); } catch (e) {} }); } } catch (e) {}
+  }
+  function killSilentEl() {
+    if (!silentEl) return;
+    try { silentEl.pause(); silentEl.removeAttribute("src"); silentEl.load(); if (silentEl.parentNode) silentEl.parentNode.removeChild(silentEl); } catch (e) {}
+    silentEl = null;
+  }
+  function goQuiet() { try { if (ac) ac.suspend(); } catch (e) {} killSilentEl(); clearMediaSession(); }
+  function wakeAudio() { if (!ac) return; ensureSilentEl(); clearMediaSession(); try { var rp = ac.resume(); if (rp && rp.catch) rp.catch(function () {}); } catch (e) {} }
+  window.addEventListener("pagehide", goQuiet);
+  window.addEventListener("freeze", goQuiet);
+  window.addEventListener("blur", function () { if (document.hidden) goQuiet(); });
+  window.addEventListener("pageshow", function () { if (!document.hidden) wakeAudio(); });
+  clearMediaSession();
 
   // ---------- Simulation ----------
   function step(dt) {
