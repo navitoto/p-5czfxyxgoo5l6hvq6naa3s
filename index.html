@@ -118,7 +118,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 35, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 36, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -161,7 +161,7 @@
   function guideDone() { guideOpen = false; try { localStorage.setItem("orel_guide_done", "1"); } catch (e) {} }
   function guideRect() { var w = W - 36, lh = 22, n = GUIDE.steps.length, h = 56 + n * 44 + 54 + 52; return { x: 18, y: Math.max(safeTop + 20, (H - h) / 2), w: w, h: h }; }
   var msgOpen = false, msgShown = false, msgAt = 0;
-  var MSG50 = { title: "הגעת לקומה 50! 🏆", body: "ידעתי שתגיעי רחוק, ואספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי, קטאן ושקיות סופר, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
+  var MSG50 = { title: "הגעת לקומה 135! 🏆", body: "ידעתי שתגיעי רחוק, ואספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי, קטאן ושקיות סופר, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
   var bannerText = "", bannerUntil = 0, lastStage = -1, faceChangedAt = 0;
   var itemCounts = {};
   var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0;
@@ -1167,7 +1167,7 @@
       if (!runStartedAt) runStartedAt = nowS();
       var rem = dt;
       while (rem > 0) { var h = Math.min(rem, 1 / 120); step(h); rem -= h; if (state !== STATE_PLAY) break; }
-      if (state === STATE_PLAY && !msgShown && score >= 50) { msgShown = true; msgOpen = true; msgAt = nowS(); held.left = 0; held.right = 0; ptrs = {}; keys.left = keys.right = false; try { sfx.stage(); duckMusic(true); } catch (e) {} }
+      if (state === STATE_PLAY && !msgShown && score >= 135) { msgShown = true; msgOpen = true; msgAt = nowS(); held.left = 0; held.right = 0; ptrs = {}; keys.left = keys.right = false; try { sfx.stage(); duckMusic(true); } catch (e) {} }
     }
     draw();
   }
