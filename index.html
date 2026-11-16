@@ -118,7 +118,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 33, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 34, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -147,7 +147,7 @@
   var GRAVITY = 2400, MOVE_ACCEL = 2600, MAX_RUN = 300, FRICTION = 1800, BASE_JUMP = 700, SPEED_JUMP_BONUS = 1.35, WALL_KEEP = 0.85;
   var player, platforms, camY, highestY, startY, score, best, comboText, comboUntil, particles, itemsGot, popups, lastLandY, runStartedAt = 0;
   var msgOpen = false, msgShown = false, msgAt = 0;
-  var MSG50 = { title: "הגעת לקומה 50! 🏆", body: "בטוח שבאייסי טאוור המקורי לא היית מגיעה לפה, אבל כאן אספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי וקטאן, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
+  var MSG50 = { title: "הגעת לקומה 50! 🏆", body: "ידעתי שתגיעי רחוק, ואספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי, קטאן ושקיות סופר, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
   var bannerText = "", bannerUntil = 0, lastStage = -1, faceChangedAt = 0;
   var itemCounts = {};
   var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0;
