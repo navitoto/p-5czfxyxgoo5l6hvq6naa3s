@@ -33,10 +33,11 @@
   function resize() {
     var vw = window.innerWidth, vh = window.innerHeight;
     var dpr = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
+    canvas.style.width = vw + "px"; canvas.style.height = vh + "px"; canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
     H = Math.round(W * vh / vw); scale = canvas.width / W;
   }
   window.addEventListener("resize", resize);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
   window.addEventListener("orientationchange", function () { setTimeout(resize, 100); });
   resize();
 
@@ -117,7 +118,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 32, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 33, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -197,21 +198,22 @@
 
   // ---------- Input ----------
   var held = { left: 0, right: 0 }, keys = { left: false, right: false };
-  function sideOf(x) { return x < window.innerWidth / 2 ? "left" : "right"; }
+  function sideOf(x) { var rc = canvas.getBoundingClientRect(); return x < rc.left + rc.width / 2 ? "left" : "right"; }
   var ptrs = {};
-  function inMuteBtn(e) { return e.clientX > window.innerWidth * (W - 58) / W && e.clientY < window.innerHeight * (safeTop + 58) / H; }
+  function toLogical(e) { var rc = canvas.getBoundingClientRect(); return { x: (e.clientX - rc.left) * W / rc.width, y: (e.clientY - rc.top) * H / rc.height }; }
+  function inMuteBtn(e) { var l = toLogical(e); return l.x > W - 58 && l.y < safeTop + 58; }
   function diffBtnY(i) { return H * 0.36 + i * 62; }
   function settingsTap(lx, ly) {
-    for (var i = 0; i < DIFFS.length; i++) if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - diffBtnY(i)) < 26) { diffIdx = i; try { localStorage.setItem("orel_diff", DIFFS[i].key); } catch (e) {} if (state === STATE_START) reset(); return; }
-    if (Math.abs(lx - W / 2) < 90 && Math.abs(ly - (diffBtnY(2) + 140)) < 26) showSettings = false;
-    else if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - (diffBtnY(2) + 76)) < 26) checkUpdate();
+    for (var i = 0; i < DIFFS.length; i++) if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - diffBtnY(i)) < 30) { diffIdx = i; try { localStorage.setItem("orel_diff", DIFFS[i].key); } catch (e) {} if (state === STATE_START) reset(); return; }
+    if (Math.abs(lx - W / 2) < 90 && Math.abs(ly - (diffBtnY(2) + 140)) < 32) showSettings = false;
+    else if (Math.abs(lx - W / 2) < 110 && Math.abs(ly - (diffBtnY(2) + 76)) < 32) checkUpdate();
   }
   canvas.addEventListener("pointerdown", function (e) {
     e.preventDefault(); audioInit();
     if (inMuteBtn(e)) { setMuted(!muted); return; }
     if (msgOpen) { closeMsg(); return; }
     if (state !== STATE_PLAY) {
-      var lx = e.clientX * W / window.innerWidth, ly = e.clientY * H / window.innerHeight;
+      var lg = toLogical(e), lx = lg.x, ly = lg.y;
       if (showSettings) { settingsTap(lx, ly); return; }
       if (lx < 58 && ly < safeTop + 58) { showSettings = true; return; }
     }
