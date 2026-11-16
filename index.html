@@ -115,7 +115,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 25, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 26, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
