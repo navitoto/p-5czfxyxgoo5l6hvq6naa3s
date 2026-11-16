@@ -117,7 +117,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 28, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 29, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -801,7 +801,7 @@
       ctx.fillStyle = "#5a3b1a"; ctx.fillRect(0, p.y, W, p.h);
       ctx.fillStyle = "#ffd54f"; ctx.fillRect(0, p.y, W, 4);
       ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(0, p.y + 4, W, 3);
-      ctx.font = "bold 16px Arial"; ctx.textAlign = "center"; outlined(S.name, W / 2, p.y + 21, "#fff");
+      if (!(bannerUntil > nowS() && bannerText === S.name && Math.abs(p.y - camY + 21 - H * 0.22) < 44)) { ctx.font = "bold 16px Arial"; ctx.textAlign = "center"; outlined(S.name, W / 2, p.y + 21, "#fff"); } // while the big banner shows the same name nearby, skip the band's copy so two names never overlap
       return;
     }
     if (p.dog) { // dog on a bone-colored pad
