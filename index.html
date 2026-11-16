@@ -117,7 +117,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 30, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 31, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -145,6 +145,8 @@
   var state = STATE_START;
   var GRAVITY = 2400, MOVE_ACCEL = 2600, MAX_RUN = 300, FRICTION = 1800, BASE_JUMP = 700, SPEED_JUMP_BONUS = 1.35, WALL_KEEP = 0.85;
   var player, platforms, camY, highestY, startY, score, best, comboText, comboUntil, particles, itemsGot, popups, lastLandY, runStartedAt = 0;
+  var msgOpen = false, msgShown = false, msgAt = 0;
+  var MSG50 = { title: "הגעת לקומה 50! 🏆", body: "בטוח שבאייסי טאוור המקורי לא היית מגיעה לפה, אבל כאן אספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי וקטאן, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
   var bannerText = "", bannerUntil = 0, lastStage = -1, faceChangedAt = 0;
   var itemCounts = {};
   var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0;
@@ -177,7 +179,7 @@
     player = { x: W / 2, y: -20, vx: 0, vy: 0, r: 18, ground: ground, faceDir: 1, squash: 0, face: "a6" };
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
-    chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null;
+    chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null; msgOpen = false; msgShown = false;
   }
 
   var restIdx = 0;
@@ -207,6 +209,7 @@
   canvas.addEventListener("pointerdown", function (e) {
     e.preventDefault(); audioInit();
     if (inMuteBtn(e)) { setMuted(!muted); return; }
+    if (msgOpen) { closeMsg(); return; }
     if (state !== STATE_PLAY) {
       var lx = e.clientX * W / window.innerWidth, ly = e.clientY * H / window.innerHeight;
       if (showSettings) { settingsTap(lx, ly); return; }
@@ -227,13 +230,15 @@
     if (e.key === "ArrowRight" || e.key === "d") keys.right = true;
     if (e.key === "m") setMuted(!muted);
     audioInit();
-    if ((e.key === " " || e.key === "Enter") && state !== STATE_PLAY) advance();
+    if ((e.key === " " || e.key === "Enter") && msgOpen) closeMsg();
+    else if ((e.key === " " || e.key === "Enter") && state !== STATE_PLAY) advance();
   });
   window.addEventListener("keyup", function (e) {
     if (e.key === "ArrowLeft" || e.key === "a") keys.left = false;
     if (e.key === "ArrowRight" || e.key === "d") keys.right = false;
   });
   var overAt = 0;
+  function closeMsg() { if (nowS() - msgAt < 1.2) return; msgOpen = false; lastLandAt += nowS() - msgAt; held.left = 0; held.right = 0; ptrs = {}; keys.left = keys.right = false; if (ac) duckMusic(false); }
   function advance() {
     if (state === STATE_OVER && nowS() - overAt < 0.7) return; // avoid accidental instant restart
     reset(); state = STATE_PLAY; runStartedAt = 0; held.left = 0; held.right = 0; ptrs = {}; if (ac) duckMusic(false);
@@ -989,6 +994,7 @@
     ctx.restore();
     drawHUD();
     drawMute();
+    if (msgOpen) drawMsg();
   }
 
   function outlined(txt, x, y, fill) {
@@ -1073,6 +1079,35 @@
     }
   }
 
+  function wrapLines(text, maxW) {
+    var words = text.split(" "), line = "", out = [];
+    for (var n = 0; n < words.length; n++) { var test = line ? line + " " + words[n] : words[n]; if (ctx.measureText(test).width > maxW && line) { out.push(line); line = words[n]; } else line = test; }
+    if (line) out.push(line); return out;
+  }
+  function drawMsg() { // floor-50 birthday card: pauses the run, tap to continue
+    var cw = W - 28, cx = W / 2, pad = 18, fs = 18, lines, th, bh, total;
+    ctx.save(); ctx.fillStyle = "rgba(25,10,30,0.72)"; ctx.fillRect(0, 0, W, H);
+    ctx.direction = "rtl"; ctx.textAlign = "center";
+    for (; fs >= 12; fs--) {
+      ctx.font = fs + "px Arial"; lines = wrapLines(MSG50.body, cw - pad * 2); var wl = wrapLines(MSG50.wish, cw - pad * 2);
+      th = fs * 1.7 + 14; bh = lines.length * fs * 1.5 + 10 + wl.length * fs * 1.5 + 14 + fs * 1.5 * 2 + 10;
+      total = pad + th + bh + pad + 26;
+      if (total <= H - 40 - safeTop) break;
+    }
+    ctx.font = fs + "px Arial"; var wl2 = wrapLines(MSG50.wish, cw - pad * 2);
+    var top = Math.max(safeTop + 14, (H - total) / 2), x0 = cx - cw / 2;
+    ctx.fillStyle = "#fff6e6"; rr(x0, top, cw, total, 18); ctx.fill();
+    ctx.strokeStyle = "#e8a13a"; ctx.lineWidth = 3; rr(x0 + 4, top + 4, cw - 8, total - 8, 15); ctx.stroke();
+    var y = top + pad + fs * 1.5;
+    ctx.fillStyle = "#b8431f"; ctx.font = "bold " + Math.round(fs * 1.45) + "px Arial"; ctx.fillText(MSG50.title, cx, y); y += fs * 1.7 + 4;
+    ctx.fillStyle = "#3a2414"; ctx.font = fs + "px Arial";
+    for (var i = 0; i < lines.length; i++) { ctx.fillText(lines[i], cx, y); y += fs * 1.5; }
+    y += 8; ctx.font = "bold " + fs + "px Arial"; ctx.fillStyle = "#7a2f6b";
+    for (var j = 0; j < wl2.length; j++) { ctx.fillText(wl2[j], cx, y); y += fs * 1.5; }
+    y += 10; ctx.font = fs + "px Arial"; ctx.fillStyle = "#3a2414"; ctx.fillText(MSG50.sign1, cx, y); y += fs * 1.5; ctx.font = "bold " + fs + "px Arial"; ctx.fillStyle = "#c2374f"; ctx.fillText(MSG50.sign2, cx, y);
+    if (nowS() - msgAt > 1.2) { ctx.font = "13px Arial"; ctx.fillStyle = "rgba(90,60,40,0.75)"; ctx.fillText("הקישי כדי להמשיך", cx, top + total - 12); }
+    ctx.restore();
+  }
   function wrap(text, cx, y, maxW, lh) {
     var words = text.split(" "), line = "";
     for (var n = 0; n < words.length; n++) {
@@ -1086,10 +1121,11 @@
   function loop(t) {
     requestAnimationFrame(loop);
     var now = t / 1000, dt = Math.min(0.033, now - (lastT || now)); lastT = now;
-    if (state === STATE_PLAY) {
+    if (state === STATE_PLAY && !msgOpen) {
       if (!runStartedAt) runStartedAt = nowS();
       var rem = dt;
       while (rem > 0) { var h = Math.min(rem, 1 / 120); step(h); rem -= h; if (state !== STATE_PLAY) break; }
+      if (state === STATE_PLAY && !msgShown && score >= 50) { msgShown = true; msgOpen = true; msgAt = nowS(); held.left = 0; held.right = 0; ptrs = {}; keys.left = keys.right = false; try { sfx.stage(); duckMusic(true); } catch (e) {} }
     }
     draw();
   }
