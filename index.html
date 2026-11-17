@@ -58,6 +58,8 @@
     comboLbl: "קומבו",
     points: "נקודות: ",
     chain: "שרשרת שיא: ",
+    chainRun: "שרשרת במשחק: ",
+    newChain: "שרשרת שיא חדשה!",
     collected: "מה אספת:",
     nothing: "לא אספת כלום הפעם"
   };
@@ -119,7 +121,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 38, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 39, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -165,8 +167,9 @@
   var MSG50 = { title: "הגעת לקומה 150! 🏆", body: "ידעתי שתגיעי רחוק, ואספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי, קטאן ושקיות סופר, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
   var bannerText = "", bannerUntil = 0, lastStage = -1, faceChangedAt = 0;
   var itemCounts = {};
-  var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0;
+  var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0, bestChainAll = 0, chainRecord = false;
   best = parseInt(localStorage.getItem("orel_best") || "0", 10) || 0;
+  bestChainAll = parseInt(localStorage.getItem("orel_bestchain") || "0", 10) || 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -197,7 +200,7 @@
     player = { x: W / 2, y: -20, vx: 0, vy: 0, r: 18, ground: ground, faceDir: 1, squash: 0, face: "a6" };
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
-    chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null; msgOpen = false; msgShown = false;
+    chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null; msgOpen = false; msgShown = false; chainRecord = false;
   }
 
   var restIdx = 0;
@@ -476,6 +479,12 @@
   clearMediaSession();
 
   // ---------- Simulation ----------
+  function endRun() {
+    state = STATE_OVER; overAt = nowS(); pickOverFace(); sfx.over(); duckMusic(true); sayOver();
+    if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); }
+    if (bestChain > bestChainAll) { bestChainAll = bestChain; chainRecord = true; localStorage.setItem("orel_bestchain", String(bestChainAll)); }
+  }
+
   function step(dt) {
     var mL = held.left > 0 || keys.left, mR = held.right > 0 || keys.right;
     if (mL && !mR) { player.vx = Math.max(player.vx - MOVE_ACCEL * dt, -MAX_RUN); player.faceDir = -1; }
@@ -507,6 +516,7 @@
     if (chain > 0 && nowS() - lastLandAt > 1.3) breakChain();
     var tgt = chain > 0 ? Math.min(1, chain / 16) * Math.max(0, Math.min(1, 1 - (nowS() - lastLandAt - 0.8) / 0.5)) : 0;
     meterShown += (tgt - meterShown) * Math.min(1, dt * 10);
+    if (chain >= 16 && particles.length < 240 && Math.random() < 0.6) confetti(player.x, player.y - 12, 1, 0.9); // full combo meter: continuous confetti until the chain breaks
     if (flip) {
       flip.t += dt;
       if (flip.t < flip.dur + 0.1) for (var fq = 0; fq < 2; fq++) { var fa = rand(0, 6.283); particles.push({ x: player.x + Math.cos(fa) * 26, y: player.y + Math.sin(fa) * 26, vx: rand(-60, 60), vy: rand(-60, 40), life: rand(0.3, 0.6), max: 0.6, c: Math.random() < 0.5 ? "255,236,110" : "255,255,255" }); }
@@ -528,7 +538,7 @@
       if (lastStage !== -1 || score > 0) { bannerText = STAGES[st].name; bannerUntil = nowS() + 2.2; sfx.stage(); sayStage(st); }
       lastStage = st;
     }
-    if (player.y - camY > H + 40) { state = STATE_OVER; overAt = nowS(); pickOverFace(); sfx.over(); duckMusic(true); sayOver(); if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } }
+    if (player.y - camY > H + 40) endRun();
     // face: happy going up, surprised when falling
     if (player.vy > 650) { if (FALL.indexOf(player.face) < 0) { player.face = pick(FALL); faceChangedAt = nowS(); } }
   }
@@ -556,7 +566,7 @@
       var nm = 1 + Math.min(4, Math.floor(chain / 4));
       flipNow = chain >= 8 && chain % 4 === 0;
       if (chain > 0 && chain % 3 === 0 && !flipNow) sayVoice();
-      if (nm > mult) { mult = nm; sfx.combo(mult); popups.push({ x: player.x, y: player.y - 40, t: 1.0, txt: T.comboLbl + " x" + mult + "!" }); if (nm >= 3) confetti(player.x, player.y - 12, 14 + mult * 6, 1.35); } // confetti only from x3 up
+      if (nm > mult) { mult = nm; sfx.combo(mult); popups.push({ x: player.x, y: player.y - 40, t: 1.0, txt: T.comboLbl + " x" + mult + "!" }); }
     } else if (higher && lastLandAt === 0) { chain = 0; }
     else { breakChain(); }
     if (higher) pts += 10 * mult * Math.max(1, gained);
@@ -576,7 +586,7 @@
       popups.push({ x: player.x, y: player.y - 70, t: 1.4, txt: flipTxt + " +" + bonus });
       sayFlip();
     }
-    if (gained >= 2) { comboText = T.combo + gained + "!"; comboUntil = nowS() + 1.2; if (gained >= 4) confetti(player.x, player.y - 10, 8 + gained * 6, 1); } // confetti only on a 4+ floor jump
+    if (gained >= 2) { comboText = T.combo + gained + "!"; comboUntil = nowS() + 1.2; }
   }
 
   // ---------- Drawing helpers ----------
@@ -1124,7 +1134,8 @@
       var oc = OVER_FACES[overFaceIdx][1]; ctx.font = "bold 28px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 22px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 18px Arial"; outlined(oc, W / 2, y, "#fff"); y += 30;
       ctx.font = "19px Arial"; outlined(T.floors + score + "   |   " + T.points + pts, W / 2, y, "#ffe9cf"); y += 24;
       var nb = score >= best && score > 0;
-      ctx.font = "15px Arial"; outlined((nb ? T.newBest : T.best + best) + "   |   " + T.chain + bestChain, W / 2, y, nb ? "#ffd54f" : "#ffe9cf"); y += 30;
+      ctx.font = "15px Arial"; outlined(nb ? T.newBest : T.best + best, W / 2, y, nb ? "#ffd54f" : "#ffe9cf"); y += 22;
+      ctx.font = "15px Arial"; outlined(chainRecord ? T.newChain : T.chainRun + bestChain + "   |   " + T.chain + bestChainAll, W / 2, y, chainRecord ? "#ffd54f" : "#ffe9cf"); y += 30;
       // everything collected, per item type
       ctx.font = "bold 16px Arial"; outlined(itemsGot > 0 ? T.collected : T.nothing, W / 2, y, "#fff"); y += 8;
       var nRows = 0; for (var rc = 0; rc < ITEM_ROWS.length; rc++) if (itemCounts[ITEM_ROWS[rc][0]]) nRows++;
@@ -1238,7 +1249,7 @@
     fakeFlip: function (n, t) { flip = { t: t || 0, dur: 0.5, turns: n || 1, dir: 1 }; },
     flipInfo: function () { return flip; },
     confettiTest: function (n) { confetti(player.x, player.y - 12, n || 24, 1.3); },
-    fakeChain: function (n) { chain = n; mult = 1 + Math.min(4, Math.floor(n / 4)); lastLandAt = nowS() + 100; meterShown = Math.min(1, n / 16); },
+    fakeChain: function (n) { chain = n; if (chain > bestChain) bestChain = chain; mult = 1 + Math.min(4, Math.floor(n / 4)); lastLandAt = nowS() + 100; meterShown = Math.min(1, n / 16); },
     platformsList: function () { return platforms; },
     teleportFloors: function (f) { var dy = -f * 100 - player.y; player.y += dy; camY += dy; highestY = player.y; score = f; lastLandY = startY - f * 100;
       var first=null; for (var i = 0; i < 12; i++) { var last = platforms[platforms.length - 1]; var np = makePlatform(Math.min(last.y, player.y) - 80, false); platforms.push(np); if(!first){first=np;} } if(first){first.dog=true;first.item=null;first.x=100;first.w=140;first.y=player.y-90;}
