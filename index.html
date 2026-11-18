@@ -119,7 +119,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 43, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 44, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -281,7 +281,7 @@
   var sndBtn = null, sndTries = 0;
   function makeSndBtn() {
     sndBtn = document.createElement("button"); sndBtn.id = "sndbtn"; sndBtn.textContent = "🔊 הקישי כאן להפעלת סאונד";
-    sndBtn.style.cssText = "position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9;padding:12px 18px;border:0;border-radius:22px;background:#ffd54f;color:#3b2a10;font:bold 16px Arial;box-shadow:0 3px 10px rgba(0,0,0,.35);display:none;touch-action:manipulation";
+    sndBtn.style.cssText = "position:fixed;left:50%;bottom:calc(55px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9;padding:12px 18px;border:0;border-radius:22px;background:#ffd54f;color:#3b2a10;font:bold 16px Arial;box-shadow:0 3px 10px rgba(0,0,0,.35);display:none;touch-action:manipulation";
     var go = function (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); sndTries++; audioInit(); testBeep();
       setTimeout(function () { if (!audioRunning()) sndBtn.textContent = "🔇 עדיין אין סאונד - בדקי שמצב שקט כבוי והעוצמה למעלה, ואז הקישי שוב"; }, 1200); };
     sndBtn.addEventListener("touchend", go); sndBtn.addEventListener("click", function (e) { e.stopPropagation(); });
@@ -981,6 +981,49 @@
     ctx.restore();
   }
 
+
+  function crown(cx, cy, s) { // small gold crown emblem, original drawing
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+    ctx.fillStyle = "#f7c948"; ctx.strokeStyle = "#b8860b"; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(-5, -1); ctx.lineTo(-2.5, 0.5); ctx.lineTo(0, -3); ctx.lineTo(2.5, 0.5); ctx.lineTo(5, -1); ctx.lineTo(5, 2); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ffe08a"; ctx.fillRect(-5, 2, 10, 1.8); ctx.strokeRect(-5, 2, 10, 1.8);
+    circle(-5, -2, 0.8, "#f7c948"); circle(0, -4, 0.9, "#f7c948"); circle(5, -2, 0.8, "#f7c948");
+    circle(0, 0.5, 0.7, "#d7262b");
+    ctx.restore();
+  }
+  function drawLogo(txt, cx, cy, size, tVal) { // chunky cartoon logo, original lettering; bidi-safe tokens (digit/Latin runs stay LTR)
+    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    var tokens = [], cur = "", curDigit = null;
+    for (var ci = 0; ci < txt.length; ci++) {
+      var ch = txt[ci], isD = /[0-9A-Za-z]/.test(ch) && ch !== " ";
+      if (curDigit === null) { cur = ch; curDigit = isD; }
+      else if (isD === curDigit && ch !== " ") cur += ch;
+      else { tokens.push(cur); cur = ch; curDigit = isD; }
+    }
+    if (cur) tokens.push(cur);
+    var widths = [], tw = 0;
+    ctx.font = "bold " + size + "px 'Arial Black', Arial, sans-serif";
+    for (var i = 0; i < tokens.length; i++) { var w = ctx.measureText(tokens[i]).width + size * 0.08; widths.push(w); tw += w; }
+    if (tw > W - 44) { var sc = (W - 44) / tw; size = Math.max(24, Math.floor(size * sc)); ctx.font = "bold " + size + "px 'Arial Black', Arial, sans-serif"; widths = []; tw = 0; for (var i2 = 0; i2 < tokens.length; i2++) { var w2 = ctx.measureText(tokens[i2]).width + size * 0.08; widths.push(w2); tw += w2; } }
+    var x = cx + tw / 2; // RTL: first token rightmost
+    for (var k = 0; k < tokens.length; k++) {
+      var cw = widths[k], lx = x - cw / 2;
+      var rot = (k % 2 === 0 ? -1 : 1) * 0.06;
+      var bob = Math.sin(tVal * 2.2 + k * 0.7) * size * 0.03;
+      ctx.save(); ctx.translate(lx, cy + bob); ctx.rotate(rot);
+      ctx.lineJoin = "round"; ctx.lineWidth = size * 0.22; ctx.strokeStyle = "rgba(40,18,4,0.9)";
+      ctx.strokeText(tokens[k], 0, size * 0.06);
+      var g = ctx.createLinearGradient(0, -size * 0.55, 0, size * 0.5);
+      g.addColorStop(0, "#fff3b0"); g.addColorStop(0.45, "#ffd54f"); g.addColorStop(1, "#f28c1e");
+      ctx.fillStyle = g; ctx.fillText(tokens[k], 0, size * 0.06);
+      ctx.lineWidth = size * 0.045; ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.strokeText(tokens[k], 0, size * 0.06);
+      ctx.restore();
+      x -= cw;
+    }
+    ctx.restore();
+  }
   // Icy Tower style "homeboy": knit beanie, baggy hoodie, big sneakers; head = Orel's photo.
   function beanie(x, y, w) { // generic knit beanie, original art. (x, y) = centre of the cuff's top edge, sitting on the head
     var r = w * 0.5, ch = w * 0.27;
@@ -1012,16 +1055,17 @@
     var arms = mode === 1 ? -1 : (mode === 2 ? 0.2 : 0.6); // arms up when rising
     // legs (baggy jeans) + sneakers
     var lx = mode === 1 ? 3 : 4, ly = 8;
-    ctx.fillStyle = "#3d5fa8";
-    if (mode === 1) { rr(-8, ly, 6, 5, 2); ctx.fill(); rr(2, ly, 6, 5, 2); ctx.fill(); ctx.fillStyle = "#fff"; rr(-11, ly + 4, 9, 4, 2); ctx.fill(); rr(2, ly + 4, 9, 4, 2); ctx.fill(); }
-    else { rr(-8 + legSwing, ly, 6, 8, 2); ctx.fill(); rr(2 - legSwing, ly, 6, 8, 2); ctx.fill(); ctx.fillStyle = "#fff"; rr(-11 + legSwing, ly + 6, 10, 4, 2); ctx.fill(); rr(1 - legSwing, ly + 6, 10, 4, 2); ctx.fill(); ctx.fillStyle = "#d7262b"; ctx.fillRect(-10 + legSwing, ly + 7.5, 8, 1.5); ctx.fillRect(2 - legSwing, ly + 7.5, 8, 1.5); }
+    ctx.fillStyle = "#7a7f3d";
+    if (mode === 1) { rr(-8, ly, 6, 5, 2); ctx.fill(); rr(2, ly, 6, 5, 2); ctx.fill(); ctx.fillStyle = "#8a5a2b"; rr(-11, ly + 4, 9, 4, 2); ctx.fill(); rr(2, ly + 4, 9, 4, 2); ctx.fill(); }
+    else { rr(-8 + legSwing, ly, 6, 8, 2); ctx.fill(); rr(2 - legSwing, ly, 6, 8, 2); ctx.fill(); ctx.fillStyle = "#8a5a2b"; rr(-11 + legSwing, ly + 6, 10, 4, 2); ctx.fill(); rr(1 - legSwing, ly + 6, 10, 4, 2); ctx.fill(); ctx.fillStyle = "#5e3a1a"; ctx.fillRect(-11 + legSwing, ly + 8.5, 10, 1.5); ctx.fillRect(1 - legSwing, ly + 8.5, 10, 1.5); }
     // arms
-    ctx.strokeStyle = "#f2b43a"; ctx.lineCap = "round"; ctx.lineWidth = 5;
+    ctx.strokeStyle = "#2e9e5b"; ctx.lineCap = "round"; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.moveTo(-9, by + 3); ctx.lineTo(-15, by + 3 + arms * -8 + (mode === 1 ? -6 : 6)); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(9, by + 3); ctx.lineTo(15, by + 3 + arms * -8 + (mode === 1 ? -6 : 6)); ctx.stroke();
     // baggy hoodie
-    ctx.fillStyle = "#f2b43a"; rr(-10, by, 20, 11, 4); ctx.fill();
+    ctx.fillStyle = "#2e9e5b"; rr(-10, by, 20, 11, 4); ctx.fill();
     ctx.fillStyle = "rgba(0,0,0,0.12)"; ctx.fillRect(-10, by + 8, 20, 3);
+    crown(0, by + 8, 0.72);
     // head with Orel's face
     drawFace(0, -13, 40, name, tilt || 0, pop || 1);
     beanie(0, -35, 35);
@@ -1140,7 +1184,8 @@
       if (showSettings) { drawSettings(); return; }
       ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(30, 28 + safeTop, 21, 0, 6.2832); ctx.fill();
       ctx.font = "19px Arial"; ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.fillText("⚙️", 30, 35 + safeTop);
-      ctx.font = "bold 30px Arial"; outlined(T.title, W / 2, H * 0.30, "#fff");
+      drawLogo("המגדל של אוראל", W / 2, H * 0.13, 52, nowS());
+      ctx.font = "bold 26px Arial"; outlined(T.title, W / 2, H * 0.29, "#fff");
       ctx.font = "16px Arial"; ctx.fillStyle = "#ffe9cf"; wrap(T.sub, W / 2, H * 0.40, W - 70, 24);
       ctx.font = "bold 20px Arial"; outlined(T.tap, W / 2, H * 0.68, "#ffd54f");
       if (!muted && !audioRunning()) { ctx.font = "15px Arial"; outlined("🔊 הקישי על המסך כדי להפעיל סאונד", W / 2, H * 0.68 + 32, "#ffffff"); }
