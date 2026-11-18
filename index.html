@@ -119,7 +119,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 42, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 43, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -163,7 +163,8 @@
   function guideRect() { var w = W - 36, lh = 22, n = GUIDE.steps.length, h = 56 + n * 44 + 54 + 52; return { x: 18, y: Math.max(safeTop + 20, (H - h) / 2), w: w, h: h }; }
   var msgOpen = false, msgShown = false, msgAt = 0;
   var MSG50 = { title: "הגעת לקומה 150! 🏆", body: "ידעתי שתגיעי רחוק, ואספת בדרך כדורי טפיוקה, שוקו חם, צ'יפס, פיתה זעתר, אסאי, קטאן ושקיות סופר, ועוד כל השטויות שאת אוהבת.", wish: "יום הולדת שמח, אוראל, ושתמיד תקפצי גבוה מכולם.", sign1: "אוהב אותך,", sign2: "תותים 🍓" };
-  var bannerText = "", bannerUntil = 0, lastStage = -1, curFace = "", facePopAt = 0;
+  var bannerText = "", bannerUntil = 0, lastStage = -1, curFace = "", facePopAt = 0, faceCycleAt = 0;
+  var FACE_POOL = ["a9", "a5", "a2", "a1", "a6"];
   var itemCounts = {};
   var flip = null, flipTxt = "אקרובטיקה!", chain = 0, mult = 1, bestChain = 0, pts = 0, lastLandAt = 0, meterShown = 0, breakFlash = 0, bestChainAll = 0, chainRecord = false;
   best = parseInt(localStorage.getItem("orel_best") || "0", 10) || 0;
@@ -1023,7 +1024,7 @@
     ctx.fillStyle = "rgba(0,0,0,0.12)"; ctx.fillRect(-10, by + 8, 20, 3);
     // head with Orel's face
     drawFace(0, -13, 40, name, tilt || 0, pop || 1);
-    beanie(0, -28, 34);
+    beanie(0, -35, 35);
     ctx.restore();
   }
 
@@ -1067,8 +1068,16 @@
     var sq = player.squash * 0.2;
     ctx.save(); ctx.translate(player.x, player.y);
     ctx.scale(1 + sq, 1 - sq);
-    var pf = chain >= 16 ? "a1" : (player.vy > 650 ? "a2" : (player.vy < -50 ? "a5" : (lastLandAt > 0 && nowS() - lastLandAt < 0.6 ? "a6" : "a9"))); // combo / falling / rising / just landed / running
-    var fname = state === STATE_OVER ? FACE_SLEEP : (state === STATE_START ? FACE_START : pf);
+    var fname; // face rotates on a 2s timer (random, no repeat); start/over faces stay fixed
+    if (state === STATE_OVER) fname = FACE_SLEEP;
+    else if (state === STATE_START) fname = FACE_START;
+    else {
+      if (FACE_POOL.indexOf(curFace) < 0 || nowS() - faceCycleAt >= 2) {
+        var nf2 = curFace;
+        while (nf2 === curFace) nf2 = FACE_POOL[(Math.random() * FACE_POOL.length) | 0];
+        fname = nf2; faceCycleAt = nowS();
+      } else fname = curFace;
+    }
     if (fname !== curFace) { curFace = fname; facePopAt = nowS(); }
     var fpop = Math.min(1, 0.82 + (nowS() - facePopAt) / 0.15 * 0.18);
     var ftilt = fname === "a2" ? 0.2 : (fname === "a5" || fname === "a1" ? -0.12 : 0);
