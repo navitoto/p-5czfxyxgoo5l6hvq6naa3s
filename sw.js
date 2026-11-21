@@ -1,7 +1,7 @@
-var CACHE = "orel-v46";
+var CACHE = "orel-v47";
 var ASSETS = ["./", "index.html", "manifest.webmanifest", "img/icon-180.png", "img/icon-192.png", "img/icon-512.png", "img/icon.png", "img/d1.webp", "img/d2.webp"];
 for (var i = 1; i <= 11; i++) ASSETS.push("img/a" + i + ".webp");
-for (var e = 1; e <= 4; e++) ASSETS.push("clips/e" + e + ".mp3");
+for (var e = 1; e <= 5; e++) ASSETS.push("clips/e" + e + ".mp3");
 for (var j = 1; j <= 15; j++) ASSETS.push("clips/v" + j + ".mp3");
 for (var t = 2; t <= 10; t++) ASSETS.push("clips/st" + t + ".mp3");
 for (var g = 1; g <= 18; g++) { if (g !== 12) ASSETS.push("clips/go" + g + ".mp3"); }
