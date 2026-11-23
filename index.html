@@ -47,6 +47,11 @@
     sub: "החזיקי את הצד הימני או השמאלי של המסך כדי לזוז. הקפיצה אוטומטית - ככל שתזוזי מהר יותר, תקפצי גבוה יותר!",
     tap: "געי במסך כדי להתחיל",
     best: "השיא שלך: ",
+    yourGame: "המשחק שלך:",
+    records: "שיאים:",
+    bestFloors: "שיא קומות: ",
+    bestChainLbl: "שיא רצף קומבו: ",
+    newBestSuffix: " - שיא חדש! 🏆",
     over: "אוף, נרדמת!",
     floors: "קומות: ",
     items: "אספת: ",
@@ -57,9 +62,7 @@
     selfie: "סלפי!",
     comboLbl: "קומבו",
     points: "נקודות: ",
-    chain: "שרשרת שיא: ",
-    chainRun: "שרשרת במשחק: ",
-    newChain: "שרשרת שיא חדשה!",
+    chainRun: "רצף הקומבו הכי ארוך: ",
     collected: "מה אספת:",
     nothing: "לא אספת כלום הפעם"
   };
@@ -119,7 +122,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 49, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 50, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -1203,10 +1206,13 @@
       ctx.textAlign = "center"; if (overFaceIdx === 0) { ctx.font = "bold 20px Arial"; outlined("z z z", W / 2 + 78, fy + 24, "#cfe3ff"); }
       var y = fy + fs + 52;
       var oc = OVER_FACES[overFaceIdx][1]; ctx.font = "bold 28px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 22px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 18px Arial"; outlined(oc, W / 2, y, "#fff"); y += 30;
-      ctx.font = "19px Arial"; outlined(T.floors + score + "   |   " + T.points + pts, W / 2, y, "#ffe9cf"); y += 24;
+      ctx.font = "bold 16px Arial"; outlined(T.yourGame, W / 2, y, "#fff"); y += 26;
+      ctx.font = "19px Arial"; outlined(T.floors + score + "   |   " + T.points + pts, W / 2, y, "#ffe9cf"); y += 22;
+      ctx.font = "15px Arial"; outlined(T.chainRun + bestChain, W / 2, y, "#ffe9cf"); y += 28;
+      ctx.font = "bold 16px Arial"; outlined(T.records, W / 2, y, "#fff"); y += 22;
       var nb = score >= best && score > 0;
-      ctx.font = "15px Arial"; outlined(nb ? T.newBest : T.best + best, W / 2, y, nb ? "#ffd54f" : "#ffe9cf"); y += 22;
-      ctx.font = "15px Arial"; outlined(chainRecord ? T.newChain : T.chainRun + bestChain + "   |   " + T.chain + bestChainAll, W / 2, y, chainRecord ? "#ffd54f" : "#ffe9cf"); y += 30;
+      ctx.font = "15px Arial"; outlined(T.bestFloors + best + (nb ? T.newBestSuffix : ""), W / 2, y, nb ? "#ffd54f" : "#ffe9cf"); y += 22;
+      ctx.font = "15px Arial"; outlined(T.bestChainLbl + bestChainAll + (chainRecord ? T.newBestSuffix : ""), W / 2, y, chainRecord ? "#ffd54f" : "#ffe9cf"); y += 30;
       // everything collected, per item type
       ctx.font = "bold 16px Arial"; outlined(itemsGot > 0 ? T.collected : T.nothing, W / 2, y, "#fff"); y += 8;
       var nRows = 0; for (var rc = 0; rc < ITEM_ROWS.length; rc++) if (itemCounts[ITEM_ROWS[rc][0]]) nRows++;
