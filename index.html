@@ -125,7 +125,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 55, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 56, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -300,7 +300,7 @@
   // ---------- Slang voice clips (decoded after the first unlock, played through the same AudioContext) ----------
   var stBufs = [], STAGE_VOICE_N = 10, overBufs = [], lastOver = -1, OVER_N = 18;
   var flipBufs = [], FLIP_N = 5;
-  var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16;
+  var voiceBufs = [], voiceLoading = false, voiceGain = null, lastVoice = -1, lastVoiceAt = -99, VOICE_N = 16, leoCatchBuf = null;
   function loadVoices() {
     if (voiceLoading || !ac) return; voiceLoading = true;
     for (var vi = 1; vi <= VOICE_N; vi++) (function (n) {
@@ -325,6 +325,16 @@
         ac.decodeAudioData(ab, function (b) { overBufs[n - 1] = b; }, function () {});
       }).catch(function () {});
     })(oi);
+    fetch("clips/leocatch.mp3").then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+      ac.decodeAudioData(ab, function (b) { leoCatchBuf = b; }, function () {});
+    }).catch(function () {});
+  }
+  function sayLeoCatch() { // the spoken Leo catch line, replaces the random game-over clip when Leo caught you
+    if (!audioRunning() || muted || !leoCatchBuf) { sayOver(); return; }
+    if (!voiceGain) { voiceGain = ac.createGain(); voiceGain.gain.value = 1.5; voiceGain.connect(master); }
+    var src = ac.createBufferSource(); src.buffer = leoCatchBuf; src.connect(voiceGain); src.start(ac.currentTime + 0.5);
+    if (musicGain) { musicGain.gain.setTargetAtTime(0.08, ac.currentTime + 0.4, 0.05); setTimeout(function () { if (musicGain && ac) musicGain.gain.setTargetAtTime(0.22, ac.currentTime, 0.3); }, 500 + leoCatchBuf.duration * 1000 + 150); }
+    lastVoiceAt = nowS() + 2;
   }
   function sayStage(idx) { // announcer: the new stage's name, right after the stage jingle
     if (!audioRunning() || muted || !stBufs[idx]) return;
@@ -494,7 +504,7 @@
 
   // ---------- Simulation ----------
   function endRun() {
-    state = STATE_OVER; overAt = nowS(); pickOverFace(); overCaption = leoCaught ? T.leoCatch : ""; sfx.over(); duckMusic(true); sayOver();
+    state = STATE_OVER; overAt = nowS(); pickOverFace(); overCaption = leoCaught ? T.leoCatch : ""; sfx.over(); duckMusic(true); if (leoCaught) sayLeoCatch(); else sayOver();
     if (DF().key !== "veasy") { if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } if (bestChain > bestChainAll) { bestChainAll = bestChain; chainRecord = true; localStorage.setItem("orel_bestchain", String(bestChainAll)); } } // veasy is a test level: no records
   }
 
