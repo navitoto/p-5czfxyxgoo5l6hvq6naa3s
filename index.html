@@ -125,7 +125,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 53, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 54, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -555,7 +555,7 @@
     if (!leo.active && score >= 150) { leo.active = true; leo.t = 0; leo.y = camY + H + 160; sfx.bark(); }
     if (leo.active) {
       leo.t += dt;
-      var lsp = (DF().key === "easy" || DF().key === "veasy" ? 0.35 : DF().key === "hard" ? 0.55 : 0.45) + leo.t * 0.004; // floors/sec gained on the player, keeps ramping
+      var lsp = (DF().key === "easy" || DF().key === "veasy" ? 0.5 : DF().key === "hard" ? 0.7 : 0.6) + leo.t * 0.004; // floors/sec gained on the player, keeps ramping
       leo.y -= lsp * 100 * dt;
       var lim2 = camY + H + 160; if (leo.y > lim2) leo.y = lim2; // never left behind by the camera
       if (leo.y - 70 <= player.y + player.r) { leoCaught = true; endRun(); }
