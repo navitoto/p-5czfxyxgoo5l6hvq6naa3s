@@ -125,7 +125,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 54, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 55, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -188,9 +188,8 @@
   function makePlatform(y, forceWide) {
     var fl = floorsAt(y);
     var difficulty = Math.min(1, fl * 100 / 6000);
-    var wide = forceWide || DF().key === "veasy";
-    var w = wide ? W : Math.min(W - 16, rand(110 - 45 * difficulty, 150 - 55 * difficulty) * DF().wMul);
-    var x = wide ? 0 : rand(8, W - 8 - w);
+    var w = forceWide ? W : (DF().key === "veasy" ? Math.floor(W / 2) : Math.min(W - 16, rand(110 - 45 * difficulty, 150 - 55 * difficulty) * DF().wMul));
+    var x = forceWide ? 0 : rand(8, W - 8 - w);
     var p = { x: x, y: y, w: w, h: 12, stage: stageAt(y), dog: false, item: null };
     if (!forceWide && fl > 4 && Math.random() < 0.07) p.dog = true;
     else if (!forceWide && Math.random() < 0.35) { var ks = STAGES[p.stage].kinds; p.item = { dx: rand(14, w - 14), got: false, kind: pick(ks), v: Math.floor(Math.random() * 5) }; }
