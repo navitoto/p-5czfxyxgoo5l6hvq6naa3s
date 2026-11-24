@@ -58,8 +58,7 @@
     newBest: "שיא חדש!",
     again: "געי במסך כדי לנסות שוב",
     combo: "קומבו +",
-    dog: "ליאו: הב הב!",
-    selfie: "סלפי!",
+    springs: { stone: "טיל!", tea: "כוס טפיוקה!", choco: "מרשמלו!", biscuit: "עצם!", fry: "קטשופ!", bag: "שקית זבל!", catan: "כבשה!", pita: "בייגל חם!", acai: "קערת אסאי!", photo: "מקל סלפי!" },
     comboLbl: "קומבו",
     points: "נקודות: ",
     chainRun: "רצף הקומבו הכי ארוך: ",
@@ -122,7 +121,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 50, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 51, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -576,7 +575,7 @@
     var boost = Math.min(Math.abs(player.vx), MAX_RUN) * SPEED_JUMP_BONUS;
     player.vy = -(BASE_JUMP + boost);
     sfx.jump(chain);
-    if (p.dog) { sfx.mega(); pts += 100 * mult; player.vy = -(BASE_JUMP * 1.75 + boost * 0.3); popups.push({ x: p.x + p.w / 2, y: p.y - 60, t: 1.1, txt: (STAGES[p.stage].plat === "photo" ? T.selfie : T.dog) }); }
+    if (p.dog) { sfx.mega(); pts += 100 * mult; player.vy = -(BASE_JUMP * 1.75 + boost * 0.3); popups.push({ x: p.x + p.w / 2, y: p.y - 60, t: 1.1, txt: T.springs[STAGES[p.stage].plat] }); }
     player.squash = 1;
     for (var i = 0; i < 6; i++) particles.push({ x: player.x + rand(-8, 8), y: p.y, vx: rand(-120, 120), vy: rand(-160, -20), life: rand(0.2, 0.45), max: 0.45, c: "255,255,255" });
     if (gained >= 2 && !flipNow) sayVoice();
@@ -973,8 +972,63 @@
       circle(0, -2, 4.3, "#fff1dc"); circle(-1.6, -3, 0.9, "#4a2a1a"); circle(1.6, -3, 0.9, "#4a2a1a"); ctx.strokeStyle = "#c0504d"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, -1.5, 2, 0.2, 2.9); ctx.stroke();
       circle(0, 10.5, 1.1, "#ff5a5a"); ctx.restore();
       var fp2 = (nowS() * 1.2 + p.x) % 1; ctx.fillStyle = "rgba(255,245,150," + (0.8 * (1 - fp2)) + ")"; ctx.beginPath(); for (var si9 = 0; si9 < 8; si9++) { var sr = si9 % 2 ? 2.5 : 7 + fp2 * 4, sa = si9 * 0.785; ctx.lineTo(sx0 + 6 + wob + 12 + Math.cos(sa) * sr, p.y - 58 + Math.sin(sa) * sr); } ctx.closePath(); ctx.fill();
-    } else if (p.dog && ready("d2")) { var d = imgs.d2, dh = 52, dw = d.naturalWidth * dh / d.naturalHeight; ctx.drawImage(d, p.x + p.w / 2 - dw / 2, p.y - dh + 3, dw, dh); }
+    } else if (p.dog) drawSpring(t, p);
     if (p.item && !p.item.got) { var gx = p.x + p.item.dx, gy = p.y - 18; ctx.fillStyle = "rgba(255,244,170,0.8)"; ctx.beginPath(); ctx.arc(gx, gy, 15, 0, 6.2832); ctx.fill(); ctx.strokeStyle = "rgba(60,30,10,0.55)"; ctx.lineWidth = 1.5; ctx.stroke(); drawThing(p.item.kind, gx, p.y - 18 - (p.item.kind === "jar" || p.item.kind === "oil" ? 6 : 0) + Math.sin(nowS() * 4 + p.x) * 2, (p.item.kind === "jar" || p.item.kind === "oil") ? 32 : 20, p.item.v); }
+  }
+
+  // per-stage spring objects on the boost pads (replaces the dog pad art; behavior unchanged)
+  function drawSpring(t, p) {
+    var cx0 = p.x + p.w / 2, wob = Math.sin(nowS() * 6 + p.x) * 2;
+    ctx.save(); ctx.translate(cx0, p.y + 3);
+    if (t === "stone") { // rocket
+      ctx.fillStyle = "#f2f2f2"; rr(-9, -46, 18, 26, 8); ctx.fill();
+      ctx.fillStyle = "#e04a3a";
+      ctx.beginPath(); ctx.moveTo(-9, -40); ctx.lineTo(0, -56); ctx.lineTo(9, -40); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-9, -28); ctx.lineTo(-18, -8); ctx.lineTo(-9, -12); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(9, -28); ctx.lineTo(18, -8); ctx.lineTo(9, -12); ctx.closePath(); ctx.fill();
+      circle(0, -30, 5, "#7fb2e0"); ctx.strokeStyle = "#3a6a9a"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, -30, 5, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = "#ffb13a"; ctx.beginPath(); ctx.moveTo(-5, -19); ctx.lineTo(0, -10 + wob); ctx.lineTo(5, -19); ctx.closePath(); ctx.fill();
+    } else if (t === "tea") { // boba cup with straw
+      ctx.fillStyle = "#f7e3bd"; ctx.beginPath(); ctx.moveTo(-17, -46); ctx.lineTo(17, -46); ctx.lineTo(12, -8); ctx.lineTo(-12, -8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#d9a35e"; ctx.beginPath(); ctx.moveTo(-15, -30); ctx.lineTo(15, -30); ctx.lineTo(12, -8); ctx.lineTo(-12, -8); ctx.closePath(); ctx.fill();
+      circle(-6, -14, 3, "#3a2412"); circle(2, -12, 3, "#3a2412"); circle(7, -16, 3, "#3a2412"); circle(-1, -19, 3, "#3a2412");
+      ctx.fillStyle = "#ffffff"; rr(-19, -50, 38, 5, 2); ctx.fill();
+      ctx.strokeStyle = "#e05a6a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(6, -50); ctx.lineTo(16, -66); ctx.stroke();
+    } else if (t === "choco") { // marshmallow
+      ctx.fillStyle = "#ffffff"; rr(-19, -34, 38, 30, 12); ctx.fill();
+      ctx.strokeStyle = "#d9c9c9"; ctx.lineWidth = 2; rr(-19, -34, 38, 30, 12); ctx.stroke();
+      ctx.fillStyle = "#fdeef2"; rr(-19, -34, 38, 12, 10); ctx.fill();
+      ctx.strokeStyle = "#e8b8c4"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -16, 9, 0.3, 2.8); ctx.stroke();
+    } else if (t === "biscuit") { // dog bone
+      ctx.fillStyle = "#fdf6e8"; rr(-20, -18, 40, 10, 5); ctx.fill();
+      circle(-21, -19, 7, "#fdf6e8"); circle(-21, -9, 7, "#fdf6e8"); circle(21, -19, 7, "#fdf6e8"); circle(21, -9, 7, "#fdf6e8");
+      ctx.strokeStyle = "#c9b28a"; ctx.lineWidth = 1.8; rr(-20, -18, 40, 10, 5); ctx.stroke();
+    } else if (t === "fry") { // ketchup bottle
+      ctx.fillStyle = "#d93a2b"; rr(-11, -42, 22, 38, 7); ctx.fill();
+      ctx.fillStyle = "#f2f2f2"; ctx.fillRect(-6, -52, 12, 10);
+      ctx.fillStyle = "#ffffff"; rr(-8, -58, 16, 7, 2); ctx.fill();
+      ctx.fillStyle = "#fff6e0"; rr(-9, -32, 18, 14, 3); ctx.fill();
+      circle(0, -25, 4, "#d93a2b");
+    } else if (t === "bag") { // garbage bag
+      ctx.fillStyle = "#4a4f58"; ctx.beginPath(); ctx.moveTo(-18, -4); ctx.lineTo(-21, -26); ctx.lineTo(-9, -38); ctx.lineTo(9, -38); ctx.lineTo(21, -26); ctx.lineTo(18, -4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-4, -38); ctx.lineTo(0, -48); ctx.lineTo(4, -38); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#6a707c"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-6, -18, 8, 3.4, 5.6); ctx.stroke();
+    } else if (t === "catan") { // sheep
+      for (var a = 0; a < 6.28; a += 0.9) circle(Math.cos(a) * 13, -22 + Math.sin(a) * 8, 7, "#ffffff");
+      circle(0, -22, 13, "#ffffff");
+      circle(14, -24, 6.5, "#3a3a3a"); circle(16, -26, 1.4, "#ffffff");
+      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(-8, -12, 4, 10); ctx.fillRect(4, -12, 4, 10);
+    } else if (t === "pita") { // hot bagel
+      ctx.fillStyle = "#e0a050"; ctx.beginPath(); ctx.ellipse(0, -14, 21, 13, 0, 0, 6.2832); ctx.fill();
+      ctx.strokeStyle = "#a06828"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -14, 21, 13, 0, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = "#f8e6bb"; ctx.beginPath(); ctx.ellipse(0, -14, 8, 5, 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#fff2cc"; for (var s2 = 0; s2 < 8; s2++) ctx.fillRect(-16 + s2 * 4.4, -20 + (s2 % 3) * 4, 2, 1.6);
+    } else { // acai bowl with purple ice cream
+      ctx.fillStyle = "#f2f2f2"; ctx.beginPath(); ctx.moveTo(-20, -26); ctx.lineTo(20, -26); ctx.lineTo(13, -4); ctx.lineTo(-13, -4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#6a2a8a"; ctx.beginPath(); ctx.ellipse(0, -26, 20, 6, 0, 0, 6.2832); ctx.fill();
+      circle(-4, -32, 7, "#9a4ab8"); circle(9, -28, 3.4, "#f2e04a"); circle(14, -25, 3, "#f2e04a"); circle(-13, -28, 3.2, "#c0392b");
+    }
+    ctx.restore();
   }
 
   function drawFace(x, y, size, name, tilt, pop) {
