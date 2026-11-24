@@ -58,7 +58,9 @@
     newBest: "שיא חדש!",
     again: "געי במסך כדי לנסות שוב",
     combo: "קומבו +",
-    springs: { stone: "טיל!", tea: "כוס טפיוקה!", choco: "מרשמלו!", biscuit: "עצם!", fry: "קטשופ!", bag: "שקית זבל!", catan: "כבשה!", pita: "בייגל חם!", acai: "קערת אסאי!", photo: "מקל סלפי!" },
+    springs: { stone: "טיל!", tea: "כוס טפיוקה!", choco: "מרשמלו!", biscuit: "עצם!", fry: "קטשופ!", bag: "חיתול מלוכלך!", catan: "כבשה!", pita: "בייגל חם!", acai: "קערת אסאי!", photo: "מקל סלפי!" },
+    leoBark: "הב הב!",
+    leoCatch: "ליאו תפס אותך! הב הב!",
     comboLbl: "קומבו",
     points: "נקודות: ",
     chainRun: "רצף הקומבו הכי ארוך: ",
@@ -101,7 +103,8 @@
   ];
   // per-photo beanie fit: [centre x (fraction of photo), cuff-top y (fraction), width (px at 120px photo), tilt (deg, + = clockwise)]
   var OVER_HAT = [[0.5,0.15,68,-4],[0.5,0.14,66,-2],[0.52,0.2,64,-8],[0.52,0.15,68,-3],[0.46,0.22,60,-14],[0.5,0.18,66,-3],[0.5,0.24,64,-6],[0.52,0.19,68,-18],[0.5,0.18,66,-3],[0.5,0.2,70,4],[0.5,0.17,60,3]];
-  var overFaceIdx = 0, lastOverFace = -1;
+  var overFaceIdx = 0, lastOverFace = -1, overCaption = "";
+  var leo = { active: false, y: 0, t: 0 }, leoCaught = false; // the chaser, active from floor 150
   function pickOverFace() { var i; do { i = Math.floor(Math.random() * OVER_FACES.length); } while (i === lastOverFace && OVER_FACES.length > 1); lastOverFace = i; overFaceIdx = i; }
 
   // ---------- State ----------
@@ -121,7 +124,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 51, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 52, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -202,6 +205,7 @@
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
     chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null; msgOpen = false; msgShown = false; chainRecord = false;
+    leo.active = false; leo.y = 0; leo.t = 0; leoCaught = false; overCaption = "";
   }
 
   var restIdx = 0;
@@ -364,7 +368,7 @@
     window.addEventListener(ev, function () { audioInit(); }, { capture: true, passive: true });
   });
   var musicTimer = null, nextStepT = 0, stepIdx = 0;
-  var BPM = 148, STEP = 60 / BPM / 4;
+  var BPM = 148, STEP = 60 / BPM / 4, STEP_CHASE = 60 / 175 / 4;
   function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
   function setupGraph() {
     var comp = ac.createDynamicsCompressor();
@@ -428,6 +432,10 @@
     combo: function (m) {
       if (!ac) return; var t = ac.currentTime, b = 660 * Math.pow(2, (m - 2) / 12 * 2);
       tone(b, t, 0.08, "square", 0.07, sfxGain); tone(b * 1.25, t + 0.08, 0.08, "square", 0.07, sfxGain); tone(b * 1.5, t + 0.16, 0.16, "square", 0.07, sfxGain);
+    },
+    bark: function () { // two synthesized yaps when Leo enters
+      if (!ac) return; var t = ac.currentTime;
+      tone(320, t, 0.08, "sawtooth", 0.15, sfxGain, 170); tone(300, t + 0.13, 0.08, "sawtooth", 0.14, sfxGain, 150);
     }
   };
   // Music: 4-bar loop, C - Am - F - G, bright square lead + triangle bass + simple drums.
@@ -439,17 +447,19 @@
   ];
   var BASS = [36, 33, 29, 31];
   function playStep(i, t) {
+    var ch = leo.active, stp = ch ? STEP_CHASE : STEP;
     var bar = (i >> 4) & 3, s = i & 15, n = MEL[bar][s];
-    if (n) tone(mtof(n), t, STEP * 1.7, "square", 0.05, musicGain);
-    if (s === 0 || s === 3 || s === 6 || s === 8 || s === 11 || s === 14) tone(mtof(BASS[bar] + (s === 6 || s === 14 ? 12 : 0)), t, STEP * 2.2, "triangle", 0.20, musicGain);
+    if (n) tone(mtof(n), t, stp * 1.7, "square", 0.05, musicGain);
+    if (s === 0 || s === 3 || s === 6 || s === 8 || s === 11 || s === 14) tone(mtof(BASS[bar] + (s === 6 || s === 14 ? 12 : 0)), t, stp * 2.2, "triangle", 0.20, musicGain);
+    else if (ch && s % 2 === 0) tone(mtof(BASS[bar]), t, stp * 1.2, "triangle", 0.13, musicGain); // chase: driving eighth-note bass
     if (s === 0 || s === 8 || (s === 10 && bar === 3)) { tone(150, t, 0.12, "sine", 0.32, musicGain, 45); }
     if (s === 4 || s === 12) noise(t, 0.09, 0.10, musicGain, "bandpass", 1800);
     if (s % 4 === 2) noise(t, 0.03, 0.035, musicGain, "highpass", 7000);
-    else if (s % 2 === 1) noise(t, 0.02, 0.012, musicGain, "highpass", 8000);
+    else if (s % 2 === 1) noise(t, ch ? 0.03 : 0.02, ch ? 0.03 : 0.012, musicGain, "highpass", 8000); // chase: louder hats
   }
   function scheduleMusic(until) {
     if (nextStepT < ac.currentTime) nextStepT = ac.currentTime + 0.05;
-    while (nextStepT < until) { playStep(stepIdx, nextStepT); nextStepT += STEP; stepIdx = (stepIdx + 1) % 64; }
+    while (nextStepT < until) { playStep(stepIdx, nextStepT); nextStepT += leo.active ? STEP_CHASE : STEP; stepIdx = (stepIdx + 1) % 64; }
   }
   function startMusic() {
     if (musicTimer) return; nextStepT = ac.currentTime + 0.1;
@@ -483,7 +493,7 @@
 
   // ---------- Simulation ----------
   function endRun() {
-    state = STATE_OVER; overAt = nowS(); pickOverFace(); sfx.over(); duckMusic(true); sayOver();
+    state = STATE_OVER; overAt = nowS(); pickOverFace(); overCaption = leoCaught ? T.leoCatch : ""; sfx.over(); duckMusic(true); sayOver();
     if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); }
     if (bestChain > bestChainAll) { bestChainAll = bestChain; chainRecord = true; localStorage.setItem("orel_bestchain", String(bestChainAll)); }
   }
@@ -540,6 +550,13 @@
     if (st !== lastStage) {
       if (lastStage !== -1 || score > 0) { bannerText = STAGES[st].name; bannerUntil = nowS() + 2.2; sfx.stage(); sayStage(st); }
       lastStage = st;
+    }
+    if (!leo.active && score >= 150) { leo.active = true; leo.t = 0; leo.y = camY + H + 160; sfx.bark(); }
+    if (leo.active) {
+      leo.t += dt;
+      var lsp = (DF().key === "easy" ? 0.35 : DF().key === "hard" ? 0.55 : 0.45) + leo.t * 0.004; // floors/sec, keeps ramping
+      leo.y -= lsp * 100 * dt;
+      if (leo.y - 70 <= player.y + player.r) { leoCaught = true; endRun(); }
     }
     if (player.y - camY > H + 40) endRun();
   }
@@ -1009,10 +1026,12 @@
       ctx.fillStyle = "#ffffff"; rr(-8, -58, 16, 7, 2); ctx.fill();
       ctx.fillStyle = "#fff6e0"; rr(-9, -32, 18, 14, 3); ctx.fill();
       circle(0, -25, 4, "#d93a2b");
-    } else if (t === "bag") { // garbage bag
-      ctx.fillStyle = "#4a4f58"; ctx.beginPath(); ctx.moveTo(-18, -4); ctx.lineTo(-21, -26); ctx.lineTo(-9, -38); ctx.lineTo(9, -38); ctx.lineTo(21, -26); ctx.lineTo(18, -4); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(-4, -38); ctx.lineTo(0, -48); ctx.lineTo(4, -38); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = "#6a707c"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-6, -18, 8, 3.4, 5.6); ctx.stroke();
+    } else if (t === "bag") { // dirty diaper
+      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.moveTo(-21, -26); ctx.quadraticCurveTo(-24, -6, 0, -5); ctx.quadraticCurveTo(24, -6, 21, -26); ctx.lineTo(14, -22); ctx.quadraticCurveTo(0, -14, -14, -22); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "#c9d4e0"; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(-21, -26); ctx.quadraticCurveTo(-24, -6, 0, -5); ctx.quadraticCurveTo(24, -6, 21, -26); ctx.stroke();
+      ctx.fillStyle = "#5a9ae0"; rr(-25, -29, 9, 10, 2); ctx.fill(); rr(16, -29, 9, 10, 2); ctx.fill();
+      circle(-4, -16, 6, "#8a5a2a"); circle(4, -17, 5, "#7a4a20"); circle(0, -21, 5, "#9a6a34");
+      ctx.strokeStyle = "#7ab648"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-9, -32); ctx.quadraticCurveTo(-13 + wob, -40, -9, -47); ctx.moveTo(0, -34); ctx.quadraticCurveTo(4 + wob, -43, 0, -50); ctx.moveTo(9, -32); ctx.quadraticCurveTo(5 + wob, -40, 9, -47); ctx.stroke();
     } else if (t === "catan") { // sheep
       for (var a = 0; a < 6.28; a += 0.9) circle(Math.cos(a) * 13, -22 + Math.sin(a) * 8, 7, "#ffffff");
       circle(0, -22, 13, "#ffffff");
@@ -1166,6 +1185,23 @@
       ctx.restore();
       if (!p.rest) { var pt2 = STAGES[p.stage].plat; if (p.dog || pt2 === "tea" || pt2 === "choco" || pt2 === "fry" || pt2 === "bag" || pt2 === "pita" || pt2 === "photo") { ctx.strokeStyle = "rgba(35,18,6,0.65)"; ctx.lineWidth = 1.6; rr(p.x - 0.5, p.y - 0.5, p.w + 1, p.h + 1, 5); ctx.stroke(); } }
     }
+    // Leo the chaser (world space; he climbs from the bottom once active)
+    if (leo.active) {
+      var lsy = leo.y - camY;
+      if (lsy > H - 140) {
+        var gg = ctx.createLinearGradient(0, camY + H - 130, 0, camY + H);
+        gg.addColorStop(0, "rgba(232,60,48,0)"); gg.addColorStop(1, "rgba(232,60,48,0.38)");
+        ctx.fillStyle = gg; ctx.fillRect(0, camY + H - 130, W, 130);
+      }
+      if (lsy < H + 40 && ready("d2")) {
+        var dh2 = 96, dw2 = imgs.d2.naturalWidth * dh2 / imgs.d2.naturalHeight;
+        var lx2 = W / 2 - dw2 / 2, bob = Math.sin(nowS() * 8) * 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 3; ctx.lineCap = "round";
+        for (var li2 = 0; li2 < 3; li2++) { var sx3 = lx2 + 8 + li2 * 20; ctx.beginPath(); ctx.moveTo(sx3, leo.y + bob - 4); ctx.lineTo(sx3 - 5, leo.y + bob + 16 + li2 * 4); ctx.stroke(); }
+        ctx.drawImage(imgs.d2, lx2, leo.y - dh2 + bob, dw2, dh2);
+        ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; outlined(T.leoBark, lx2 + dw2 + 44, leo.y - dh2 + 30 + bob, "#ffd54f");
+      }
+    }
     for (var j = 0; j < particles.length; j++) { var pt = particles[j]; ctx.fillStyle = "rgba(" + pt.c + "," + (pt.conf ? 0.95 * Math.min(1, pt.life / (pt.max * 0.4)) : 0.8 * pt.life / pt.max) + ")"; if (pt.conf) { ctx.save(); ctx.translate(pt.x, pt.y); ctx.rotate(pt.rot); ctx.fillRect(-4, -2.5, 8, 5); ctx.restore(); } else ctx.fillRect(pt.x - 2, pt.y - 2, 4, 4); }
     // player
     var sq = player.squash * 0.2;
@@ -1259,7 +1295,7 @@
       var OF = OVER_FACES[overFaceIdx][0]; if (ready(OF)) { ctx.drawImage(imgs[OF], W / 2 - fs / 2, fy + 14, fs, fs); var oh = OVER_HAT[overFaceIdx]; ctx.save(); ctx.translate(W / 2 - fs / 2 + oh[0] * fs, fy + 14 + oh[1] * fs); ctx.rotate(oh[3] * Math.PI / 180); var hs = oh[2] / 26 / 2.6 * 2.6; ctx.scale(hs, hs); beanie(0, 0, 26); ctx.restore(); }
       ctx.textAlign = "center"; if (overFaceIdx === 0) { ctx.font = "bold 20px Arial"; outlined("z z z", W / 2 + 78, fy + 24, "#cfe3ff"); }
       var y = fy + fs + 52;
-      var oc = OVER_FACES[overFaceIdx][1]; ctx.font = "bold 28px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 22px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 18px Arial"; outlined(oc, W / 2, y, "#fff"); y += 30;
+      var oc = overCaption || OVER_FACES[overFaceIdx][1]; ctx.font = "bold 28px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 22px Arial"; if (ctx.measureText(oc).width > W - 30) ctx.font = "bold 18px Arial"; outlined(oc, W / 2, y, "#fff"); y += 30;
       ctx.font = "bold 16px Arial"; outlined(T.yourGame, W / 2, y, "#fff"); y += 26;
       ctx.font = "19px Arial"; outlined(T.floors + score + "   |   " + T.points + pts, W / 2, y, "#ffe9cf"); y += 22;
       ctx.font = "15px Arial"; outlined(T.chainRun + bestChain, W / 2, y, "#ffe9cf"); y += 28;
