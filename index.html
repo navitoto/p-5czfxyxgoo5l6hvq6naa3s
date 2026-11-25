@@ -125,7 +125,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 56, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 57, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -149,6 +149,8 @@
     }).catch(function () { updBusy = false; setUpd("אין חיבור לאינטרנט"); });
   }
   function DF() { return DIFFS[diffIdx]; }
+  var test140 = false, testTapN = 0, testTapAt = -99, testMsgUntil = 0; // TEMPORARY (approved 25 Nov): floor-140 test mode for Leo testing; remove when Tut says
+  try { test140 = localStorage.getItem("orel_test140") === "1"; } catch (e) {}
   var STATE_START = 0, STATE_PLAY = 1, STATE_OVER = 2;
   var state = STATE_START;
   var GRAVITY = 2400, MOVE_ACCEL = 2600, MAX_RUN = 300, FRICTION = 1800, BASE_JUMP = 700, SPEED_JUMP_BONUS = 1.35, WALL_KEEP = 0.85;
@@ -207,6 +209,10 @@
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
     chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null; msgOpen = false; msgShown = false; chainRecord = false;
     leo.active = false; leo.y = 0; leo.t = 0; leoCaught = false; overCaption = "";
+    if (test140) { // TEMPORARY test mode: start the run at floor 140 so Leo shows up within seconds
+      var tdy = -140 * 100 - player.y; player.y += tdy; camY += tdy; highestY = player.y; score = 140; lastLandY = startY - 140 * 100;
+      platforms.push({ x: 0, y: player.y + 60, w: W, h: 12, stage: stageAt(player.y), dog: false, item: null });
+    }
   }
 
   var restIdx = 0;
@@ -243,6 +249,11 @@
       var lg = toLogical(e), lx = lg.x, ly = lg.y;
       if (showSettings) { settingsTap(lx, ly); return; }
       if (lx < 58 && ly < safeTop + 58) { showSettings = true; return; }
+      if (Math.abs(lx - W / 2) < 90 && ly > H - 40) { // 5 quick taps on the version text toggle the temporary test mode
+        var tn = nowS(); if (tn - testTapAt > 2) testTapN = 0; testTapAt = tn; testTapN++;
+        if (testTapN >= 5) { testTapN = 0; test140 = !test140; try { localStorage.setItem("orel_test140", test140 ? "1" : "0"); } catch (e2) {} testMsgUntil = tn + 2; }
+        return;
+      }
     }
     if (state !== STATE_PLAY) { advance(); return; }
     var sd = sideOf(e.clientX); ptrs[e.pointerId] = sd; held[sd]++;
@@ -505,7 +516,7 @@
   // ---------- Simulation ----------
   function endRun() {
     state = STATE_OVER; overAt = nowS(); pickOverFace(); overCaption = leoCaught ? T.leoCatch : ""; sfx.over(); duckMusic(true); if (leoCaught) sayLeoCatch(); else sayOver();
-    if (DF().key !== "veasy") { if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } if (bestChain > bestChainAll) { bestChainAll = bestChain; chainRecord = true; localStorage.setItem("orel_bestchain", String(bestChainAll)); } } // veasy is a test level: no records
+    if (DF().key !== "veasy" && !test140) { if (score > best) { best = score; localStorage.setItem("orel_best", String(best)); } if (bestChain > bestChainAll) { bestChainAll = bestChain; chainRecord = true; localStorage.setItem("orel_bestchain", String(bestChainAll)); } } // veasy is a test level: no records
   }
 
   function step(dt) {
@@ -1296,6 +1307,8 @@
       ctx.font = "bold 20px Arial"; outlined(T.tap, W / 2, H * 0.68, "#ffd54f");
       if (!muted && !audioRunning()) { ctx.font = "15px Arial"; outlined("🔊 הקישי על המסך כדי להפעיל סאונד", W / 2, H * 0.68 + 32, "#ffffff"); }
       ctx.font = "11px Arial"; ctx.globalAlpha = 0.7; outlined("גרסה " + VERSION_N, W / 2, H - 12, "#ffe9cf"); ctx.globalAlpha = 1;
+      if (test140) { ctx.font = "bold 13px Arial"; outlined("מצב בדיקה: התחלה מקומה 140", W / 2, H - 34, "#ff9d5c"); }
+      if (nowS() < testMsgUntil) { ctx.font = "bold 16px Arial"; outlined(test140 ? "מצב בדיקה הופעל" : "מצב בדיקה כובה", W / 2, H - 58, "#ffd54f"); }
       if (updNotice && performance.now() < 9000) { ctx.font = "bold 15px Arial"; outlined(updNotice, W / 2, H * 0.75 + 30, "#7dff9b"); }
       ctx.font = "15px Arial"; outlined("רמה: " + DF().label, W / 2, H * 0.75 - (best > 0 ? 26 : 0), "#ffd54f");
       if (best > 0) { ctx.font = "15px Arial"; outlined(T.best + best, W / 2, H * 0.75, "#ffe9cf"); }
