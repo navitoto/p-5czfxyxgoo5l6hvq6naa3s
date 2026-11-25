@@ -104,7 +104,7 @@
   // per-photo beanie fit: [centre x (fraction of photo), cuff-top y (fraction), width (px at 120px photo), tilt (deg, + = clockwise)]
   var OVER_HAT = [[0.5,0.15,68,-4],[0.5,0.14,66,-2],[0.52,0.2,64,-8],[0.52,0.15,68,-3],[0.46,0.22,60,-14],[0.5,0.18,66,-3],[0.5,0.24,64,-6],[0.52,0.19,68,-18],[0.5,0.18,66,-3],[0.5,0.2,70,4],[0.5,0.17,60,3]];
   var overFaceIdx = 0, lastOverFace = -1, overCaption = "";
-  var leo = { active: false, y: 0, t: 0 }, leoCaught = false; // the chaser, active from floor 150
+  var leo = { active: false, y: 0, x: 0, t: 0, face: 1 }, leoCaught = false; // the chaser, active from floor 150
   function pickOverFace() { var i; do { i = Math.floor(Math.random() * OVER_FACES.length); } while (i === lastOverFace && OVER_FACES.length > 1); lastOverFace = i; overFaceIdx = i; }
 
   // ---------- State ----------
@@ -125,7 +125,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 58, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 59, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -208,7 +208,7 @@
     camY = -H + 60; highestY = 0; score = 0; itemsGot = 0; lastLandY = 0;
     comboText = ""; comboUntil = 0; lastStage = -1; bannerUntil = 0;
     chain = 0; mult = 1; bestChain = 0; pts = 0; lastLandAt = 0; meterShown = 0; breakFlash = 0; itemCounts = {}; flip = null; msgOpen = false; msgShown = false; chainRecord = false;
-    leo.active = false; leo.y = 0; leo.t = 0; leoCaught = false; overCaption = "";
+    leo.active = false; leo.y = 0; leo.x = 0; leo.t = 0; leo.face = 1; leoCaught = false; overCaption = "";
     if (test140) { // TEMPORARY test mode: start the run at floor 140 so Leo shows up within seconds
       var tdy = -140 * 100 - player.y; player.y += tdy; camY += tdy; highestY = player.y; score = 140; lastLandY = startY - 140 * 100;
       platforms.push({ x: 0, y: player.y + 60, w: W, h: 12, stage: stageAt(player.y), dog: false, item: null });
@@ -572,13 +572,17 @@
       if (lastStage !== -1 || score > 0) { bannerText = STAGES[st].name; bannerUntil = nowS() + 2.2; sfx.stage(); sayStage(st); }
       lastStage = st;
     }
-    if (!leo.active && score >= 150) { leo.active = true; leo.t = 0; leo.y = camY + H + 160; sfx.bark(); }
+    if (!leo.active && score >= 150) { leo.active = true; leo.t = 0; leo.y = camY + H + 160; leo.x = player.x; sfx.bark(); }
     if (leo.active) {
       leo.t += dt;
       var lsp = (DF().key === "easy" || DF().key === "veasy" ? 0.5 : DF().key === "hard" ? 0.7 : 0.6) + leo.t * 0.004; // floors/sec gained on the player, keeps ramping
       leo.y -= lsp * 100 * dt;
       var lim2 = camY + H + 160; if (leo.y > lim2) leo.y = lim2; // never left behind by the camera
-      if (leo.y - 70 <= player.y + player.r) { leoCaught = true; endRun(); }
+      var lspH = (DF().key === "easy" || DF().key === "veasy" ? 140 : DF().key === "hard" ? 220 : 180); // px/sec horizontal follow
+      var dxp = player.x - leo.x, maxH = lspH * dt;
+      if (Math.abs(dxp) > 2) leo.face = dxp < 0 ? -1 : 1;
+      leo.x += Math.abs(dxp) <= maxH ? dxp : Math.sign(dxp) * maxH;
+      if (leo.y - 70 <= player.y + player.r && Math.abs(dxp) < (ready("d2") ? imgs.d2.naturalWidth * 96 / imgs.d2.naturalHeight / 2 : 48) + player.r) { leoCaught = true; endRun(); } // nose line + real horizontal overlap
     }
     if (player.y - camY > H + 40) endRun();
   }
@@ -1217,11 +1221,12 @@
       }
       if (lsy < H + 40 && ready("d2")) {
         var dh2 = 96, dw2 = imgs.d2.naturalWidth * dh2 / imgs.d2.naturalHeight;
-        var lx2 = W / 2 - dw2 / 2, bob = Math.sin(nowS() * 8) * 3;
+        var lx2 = leo.x - dw2 / 2, bob = Math.sin(nowS() * 8) * 3;
         ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 3; ctx.lineCap = "round";
         for (var li2 = 0; li2 < 3; li2++) { var sx3 = lx2 + 8 + li2 * 20; ctx.beginPath(); ctx.moveTo(sx3, leo.y + bob - 4); ctx.lineTo(sx3 - 5, leo.y + bob + 16 + li2 * 4); ctx.stroke(); }
-        ctx.drawImage(imgs.d2, lx2, leo.y - dh2 + bob, dw2, dh2);
-        ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; outlined(T.leoBark, lx2 + dw2 + 44, leo.y - dh2 + 30 + bob, "#ffd54f");
+        ctx.save(); if (leo.face < 0) { ctx.translate(lx2 + dw2 / 2, 0); ctx.scale(-1, 1); ctx.translate(-(lx2 + dw2 / 2), 0); }
+        ctx.drawImage(imgs.d2, lx2, leo.y - dh2 + bob, dw2, dh2); ctx.restore();
+        ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; outlined(T.leoBark, Math.min(Math.max(leo.x + dw2 / 2 + 44, 60), W - 40), leo.y - dh2 + 30 + bob, "#ffd54f");
       }
     }
     for (var j = 0; j < particles.length; j++) { var pt = particles[j]; ctx.fillStyle = "rgba(" + pt.c + "," + (pt.conf ? 0.95 * Math.min(1, pt.life / (pt.max * 0.4)) : 0.8 * pt.life / pt.max) + ")"; if (pt.conf) { ctx.save(); ctx.translate(pt.x, pt.y); ctx.rotate(pt.rot); ctx.fillRect(-4, -2.5, 8, 5); ctx.restore(); } else ctx.fillRect(pt.x - 2, pt.y - 2, 4, 4); }
