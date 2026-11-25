@@ -125,7 +125,7 @@
   window.addEventListener("resize", function () { setTimeout(measureSafe, 60); });
   window.addEventListener("orientationchange", function () { setTimeout(measureSafe, 300); });
   window.addEventListener("load", function () { measureSafe(); setTimeout(measureSafe, 500); });
-  var showSettings = false, VERSION_N = 57, updMsg = "", updMsgAt = 0, updBusy = false;
+  var showSettings = false, VERSION_N = 58, updMsg = "", updMsgAt = 0, updBusy = false;
   function setUpd(m) { updMsg = m; updMsgAt = performance.now(); }
   var updNotice = "";
   try { var uf = localStorage.getItem("orel_upd_from"); if (uf) { localStorage.removeItem("orel_upd_from"); updNotice = (+uf === VERSION_N) ? "הגרסה מעודכנת (" + VERSION_N + ")" : "עודכן לגרסה " + VERSION_N; } } catch (e) {}
@@ -249,8 +249,8 @@
       var lg = toLogical(e), lx = lg.x, ly = lg.y;
       if (showSettings) { settingsTap(lx, ly); return; }
       if (lx < 58 && ly < safeTop + 58) { showSettings = true; return; }
-      if (Math.abs(lx - W / 2) < 90 && ly > H - 40) { // 5 quick taps on the version text toggle the temporary test mode
-        var tn = nowS(); if (tn - testTapAt > 2) testTapN = 0; testTapAt = tn; testTapN++;
+      if (ly > H - 90) { // 5 quick taps anywhere in the bottom strip toggle the temporary test mode
+        var tn = nowS(); if (tn - testTapAt > 2.5) testTapN = 0; testTapAt = tn; testTapN++;
         if (testTapN >= 5) { testTapN = 0; test140 = !test140; try { localStorage.setItem("orel_test140", test140 ? "1" : "0"); } catch (e2) {} testMsgUntil = tn + 2; }
         return;
       }
@@ -1309,6 +1309,7 @@
       ctx.font = "11px Arial"; ctx.globalAlpha = 0.7; outlined("גרסה " + VERSION_N, W / 2, H - 12, "#ffe9cf"); ctx.globalAlpha = 1;
       if (test140) { ctx.font = "bold 13px Arial"; outlined("מצב בדיקה: התחלה מקומה 140", W / 2, H - 34, "#ff9d5c"); }
       if (nowS() < testMsgUntil) { ctx.font = "bold 16px Arial"; outlined(test140 ? "מצב בדיקה הופעל" : "מצב בדיקה כובה", W / 2, H - 58, "#ffd54f"); }
+      else if (testTapN > 0 && nowS() - testTapAt < 2.5) { ctx.font = "bold 15px Arial"; outlined("הקש עוד " + (5 - testTapN) + " למצב בדיקה", W / 2, H - 58, "#ffd54f"); }
       if (updNotice && performance.now() < 9000) { ctx.font = "bold 15px Arial"; outlined(updNotice, W / 2, H * 0.75 + 30, "#7dff9b"); }
       ctx.font = "15px Arial"; outlined("רמה: " + DF().label, W / 2, H * 0.75 - (best > 0 ? 26 : 0), "#ffd54f");
       if (best > 0) { ctx.font = "15px Arial"; outlined(T.best + best, W / 2, H * 0.75, "#ffe9cf"); }
